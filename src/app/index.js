@@ -5,15 +5,31 @@ import { useFonts } from '@expo-google-fonts/inter/useFonts';
 import { PlayfairDisplay_500Medium_Italic } from '@expo-google-fonts/playfair-display/500Medium_Italic';
 import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
 import {useTheme} from '../contexts/themeContext';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 
 export default function Splash(){
 
     const {theme} = useTheme();
+    const router = useRouter();
+    const [isTimeup, setIsTimeup] = useState(false);
 
     let [fontsLoaded] = useFonts({
         PlayfairDisplay_500Medium_Italic,
         Inter_300Light, 
     });
+
+    useEffect(()=> {
+        const timer = setTimeout(()=> setIsTimeup(true), 3000);
+        return() => clearTimeout(timer);
+    }, []);
+
+    useEffect(()=> {
+        if(isTimeup && fontsLoaded){
+            router.replace('/onboarding');
+        }
+    }, [isTimeup, fontsLoaded])
+    
     if(!fontsLoaded) return null;
 
     return(

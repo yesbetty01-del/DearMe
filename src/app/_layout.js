@@ -1,10 +1,13 @@
 import ThemeProvider from "../contexts/themeContext";
-import Splash from './index';
+import { Stack } from "expo-router";
 
 export default function Layout() {
     return(
         <ThemeProvider>
-            <Splash/>
+            <Stack screenOptions={{headerShown: false}}>
+                <Stack.Screen name='index'/>
+                <Stack.Screen name='onboarding'/>
+            </Stack>
         </ThemeProvider>
     )
 }
