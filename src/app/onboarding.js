@@ -1,11 +1,13 @@
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../contexts/themeContext';
 import { useFonts } from '@expo-google-fonts/inter/useFonts';
 import { PlayfairDisplay_500Medium_Italic } from '@expo-google-fonts/playfair-display/500Medium_Italic';
 import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
-import Feather from '@expo/vector-icons/Feather';
+import Onboarding from 'react-native-onboarding-swiper';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-export default function Onboarding() {
+export default function OnBoarding() {
     const {theme} = useTheme();
 
     let [fontsLoaded] = useFonts({
@@ -15,89 +17,125 @@ export default function Onboarding() {
     if(!fontsLoaded) return null;
 
     return(
-        <View style={[styles.container, {backgroundColor: theme.background}]}>
-            <TouchableOpacity style={styles.skipButton}>
-                <Text style={{color: theme.secondary}}>SKIP</Text>
-            </TouchableOpacity>
-            
-            <Image
-                source={require('../../assets/onboarding1.png')}
-                style={styles.image} 
+        <SafeAreaView style={[styles.container, {backgroundColor: theme.background}]}>
+            <Onboarding
+                pages={[
+                    {
+                        backgroundColor: theme.background,
+                        image:
+                            <Image
+                            source={require('../../assets/onboarding1.png')}
+                            style={styles.image} 
+                        />,
+                        title: (
+                            <Text style={[styles.headline, {color: theme.primary}]}>
+                                Write to Your Future Self
+                            </Text>
+                        ),
+                        subtitle: (
+                            <ScrollView>
+                                <Text style={[styles.description, {color: theme.secondary}]}>
+                                    Capture your current thoughts, dreams, and feelings. Send them to youself weeks, months, or years from now.
+                                </Text>
+                            </ScrollView>
+                        ),
+                    },
+                    {
+                        backgroundColor: theme.background,
+                        image: (
+                            <View>
+                                <View style={styles.title}>
+                                    <MaterialIcons name="auto-stories" size={24} color={theme.primary} />
+                                    <Text style={[ styles.titleText, {color: theme.primary}]}> DearMe</Text>
+                                </View>
+                                <Image
+                                source={require('../../assets/onboarding2.png')}
+                                style={styles.image}
+                                />
+                            </View>
+                        ),
+                            title: (
+                                <Text style={[styles.headline, {color: theme.primary}]}>
+                                    Reflect and Reply
+                                </Text>
+                            ),
+                            subtitle: (
+                                <ScrollView>
+                                    <Text style={[styles.description, {color: theme.secondary}]}>
+                                        Recieve your past letters when the time is right,
+                                        and write back to reflect on how far you've come.
+                                        Keep a daily journal in between.
+                                    </Text>
+                                </ScrollView>
+                            )
+                    },
+                    {
+                        backgroundColor: theme.background,
+                        image: (
+                            <View>
+                                <View style={styles.title}>
+                                    <MaterialIcons name="auto-stories" size={24} color={theme.primary} />
+                                    <Text style={[styles.titleText, {color: theme.primary}]}> DearMe</Text>
+                                </View>
+                                <Image
+                                source={require('../../assets/onboarding3.png')}
+                                style={styles.image}
+                                />
+                            </View>
+                        ),
+                        title: (
+                            <Text style={[styles.headline, {color: theme.primary}]}>
+                                Your Private Sanctuary
+                            </Text>
+                        ),
+                        subtitle: (
+                            <ScrollView>
+                                <Text style={[styles.description, {color: theme.secondary}]}>
+                                    Your letters and journals are stored safely on your device.
+                                    No internet required, just you and your thoughts.
+                                </Text>
+                            </ScrollView>
+                        )
+                    }
+                ]}
             />
-            <Text style={[styles.headline, {color: theme.primary}]}>
-                Write to Your Future Self
-            </Text>
-            <Text style={[styles.description, {color: theme.secondary}]}>
-                Capture your current thoughts, dreams, and feelings. Send them to youself weeks, months, or years from now.
-            </Text>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 'auto'}}>
-                <View style={styles.dots}>
-                  <View style={[styles.pageDot, {backgroundColor: theme.primary, width: 25}]} />
-                  <View style={[styles.pageDot, {backgroundColor: theme.text, opacity: 0.5}]} />
-                  <View style={[styles.pageDot, {backgroundColor: theme.text, opacity: 0.5}]}/>
-                </View>
             
-                <TouchableOpacity style={[styles.fabButton, {backgroundColor: theme.primary}]}>
-                    <Text style={styles.fabText}>Next </Text>
-                    <Feather name="arrow-right" size={18} color="white" />
-                </TouchableOpacity>
-            </View>
-            
-        </View>
+        </SafeAreaView>
     )
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    title: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 30
+        padding: 20
     },
-    skipButton: {
-        alignSelf: 'flex-end',
+    titleText: {
+        fontSize: 20,
+        fontStyle: 'italic'
     },
     image: {
         borderRadius: 30,
         elevation: 0.5,
         width: 320,
-        height: 400,
-        marginTop: 45,
-        marginBottom: 'auto'
+        height: 400
     },
     headline: {
         fontSize: 32,
-        marginTop: 'auto',
+        paddingHorizontal: 30,
         textAlign: 'center',
         fontFamily: 'PlayfairDisplay_500Medium_Italic'
     },
     description: {
         textAlign: 'center',
         paddingTop: 25,
+        paddingHorizontal: 30,
         fontSize: 18, 
         fontFamily: 'Inter_300Light',
         lineHeight: 25
     },
-    dots: {
-        alignItems: 'center',
-        flexDirection: 'row'
-    },
-    pageDot: {
-        height: 6,
-        width: 6,
-        borderRadius: 3,
-        marginHorizontal: 5,
-    },
-    fabButton: {
-        height: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 35,
-        borderRadius: 30,
-        flexDirection: 'row'
-    },
-    fabText: {
-        color: 'white',
-        fontSize: 16
-    }
 })
