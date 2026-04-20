@@ -6,9 +6,12 @@ import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
 import Onboarding from 'react-native-onboarding-swiper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { setItems } from '../utils/storage';
+import { useRouter } from 'expo-router';
 
 export default function OnBoarding() {
     const {theme} = useTheme();
+    const router = useRouter();
 
     let [fontsLoaded] = useFonts({
         PlayfairDisplay_500Medium_Italic,
@@ -16,9 +19,21 @@ export default function OnBoarding() {
     });
     if(!fontsLoaded) return null;
 
+    const handleDone = async() =>{
+        try {
+            await setItems ("onboardingCompleted", "true");
+            console.log("Onboarding status set to true");
+            router.replace('/(tabs)');
+        }
+        catch(error) {
+            console.error("Error setting onboarding status:", error);
+        };
+    }
+
     return(
         <SafeAreaView style={[styles.container, {backgroundColor: theme.background}]}>
             <Onboarding
+                onDone={handleDone}
                 pages={[
                     {
                         backgroundColor: theme.background,

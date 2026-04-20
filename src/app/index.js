@@ -7,6 +7,7 @@ import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
 import {useTheme} from '../contexts/themeContext';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import { getItems } from '../utils/storage';
 
 export default function Splash(){
 
@@ -19,16 +20,33 @@ export default function Splash(){
         Inter_300Light, 
     });
 
+    const [showOnboarding, setShowOnboarding] = useState(true);
+
+    const checkOnboardingStatus = async () =>{
+        try {
+            const onboardingCompleted = await getItems("onboardingCompleted");
+            setShowOnboarding(onboardingCompleted != "true");
+        }
+        catch (error) {
+            console.error("Error checking onboarding status:", error);
+        }
+    }
+
     useEffect(()=> {
+        checkOnboardingStatus();
         const timer = setTimeout(()=> setIsTimeup(true), 3000);
         return() => clearTimeout(timer);
+        
     }, []);
 
     useEffect(()=> {
         if(isTimeup && fontsLoaded){
-            router.replace('/onboarding');
+            if(showOnboarding)
+                router.replace('/onboarding');
+            else
+                router.replace('/(tabs)');
         }
-    }, [isTimeup, fontsLoaded])
+    }, [isTimeup, fontsLoaded, showOnboarding])
     
     if(!fontsLoaded) return null;
 
