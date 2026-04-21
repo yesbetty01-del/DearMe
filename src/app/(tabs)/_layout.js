@@ -11,7 +11,8 @@ export default function Layout() {
                 borderTopWidth: 0,
             },
         }}>
-            <Tabs.Screen name='Home' options={{
+            <Tabs.Screen name='index' options={{
+                title: 'Home',
                 headerShown: false,
                 tabBarIcon: () => <Foundation name="home" size={24} color='grey' />
             }}/>

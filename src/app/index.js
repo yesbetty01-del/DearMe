@@ -46,7 +46,7 @@ export default function Splash(){
             else
                 router.replace('/(tabs)');
         }
-    }, [isTimeup, fontsLoaded, showOnboarding])
+    }, [isTimeup, fontsLoaded])
     
     if(!fontsLoaded) return null;
 
