@@ -5,9 +5,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFonts } from '@expo-google-fonts/inter/useFonts';
 import { PlayfairDisplay_500Medium_Italic } from '@expo-google-fonts/playfair-display/500Medium_Italic';
 import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
+import { useProfile } from '../../contexts/profileContext';
 
 export default function Home() {
     const {theme} = useTheme();
+    const {name} = useProfile();
 
      let [fontsLoaded] = useFonts({
         PlayfairDisplay_500Medium_Italic,
@@ -18,25 +20,27 @@ export default function Home() {
 
     return(
         <SafeAreaView edges={['top']} style={[styles.container, {backgroundColor: theme.background}]}>
-            <ScrollView style>
+            <ScrollView contentContainerStyle={{flexGrow: 1, alignItems:'center'}}>
                 <Text style={[styles.titleText, {color: theme.primary}]}>DearMe</Text>
-                <View style={{alignItems: 'center'}}>
-                    <View style={[styles.customCard, {backgroundColor: theme.card1, borderColor: theme.card1}]}>
-                        <MaterialIcons name="auto-stories" size={24} color={theme.primary} />
-                        <Text style={[styles.prompt, {color: theme.secondary}]}>
-                            "If you were to write a letter to the version of yourself from
-                            five years ago, what is the one secret you'd finally share?"
-                        </Text>
-                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                            <TouchableOpacity style={[styles.button, {backgroundColor: theme.primary}]}>
-                                <Text style={{color:'white', fontWeight: '500'}}>Start Writing</Text>
-                            </TouchableOpacity>
-                            <Text style={{color: theme.text, fontStyle: 'italic'}}>DailyPrompt</Text>
-                        </View>
+                <Text style={{fontFamily: 'PlayfairDisplay_500Medium_Italic', fontSize: 30}}>
+                    Hello {name}
+                </Text>
+                
+                <View style={[styles.customCard, {backgroundColor: theme.card1, borderColor: theme.card1}]}>
+                    <MaterialIcons name="auto-stories" size={24} color={theme.primary} />
+                    <Text style={[styles.prompt, {color: theme.secondary}]}>
+                        "If you were to write a letter to the version of yourself from
+                        five years ago, what is the one secret you'd finally share?"
+                    </Text>
+                    <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                        <TouchableOpacity style={[styles.button, {backgroundColor: theme.primary}]}>
+                            <Text style={{color:'white', fontWeight: '500'}}>Start Writing</Text>
+                        </TouchableOpacity>
+                        <Text style={{color: theme.text, fontStyle: 'italic'}}>DailyPrompt</Text>
                     </View>
                 </View>
-
-                <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+                
+                <View style={{width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
                     <Text style={{fontFamily: 'PlayfairDisplay_500Medium_Italic', fontSize: 20}}>
                         Recent Reflections
                     </Text>
@@ -50,7 +54,7 @@ export default function Home() {
                 </View>
 
                 <View style={{alignItems: 'center'}}>
-                    <View style={styles.upcomingLetter}>
+                    <View style={[styles.upcomingLetter, {backgroundColor: theme.card2}]}>
                         <Text>No upcoming letter</Text>
                     </View>
                 </View>
@@ -61,13 +65,12 @@ export default function Home() {
 const styles = StyleSheet.create ({
     container: {
         flex: 1,
-        //alignItems: 'center',
         paddingHorizontal: 25
     },
     titleText: {
         fontSize: 20,
-        alignSelf: 'center',
-        fontFamily: 'PlayfairDisplay_500Medium_Italic'
+        fontFamily: 'PlayfairDisplay_500Medium_Italic',
+        marginBottom: 50
     },
     customCard: {
         marginTop: 30,
@@ -107,6 +110,8 @@ const styles = StyleSheet.create ({
         margin: 60,
         borderRadius: 30,
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        borderColor: 'transparent',
+        elevation: 1
     }
 })
