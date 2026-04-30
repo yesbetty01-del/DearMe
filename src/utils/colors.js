@@ -4,5 +4,7 @@ export const colors = {
     secondary: '#606059',
     text: '#BDC2B8',
     card1: '#F4F6EC',
-    card2: '#FFF2EB'
+    card2: '#FFF2EB',
+    highlight1: '#D7E7CD',
+    highlight2: '#FFDBCF'
 }

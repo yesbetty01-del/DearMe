@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView, Switch, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Pressable, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useState } from 'react';
 import { useTheme } from '../../contexts/themeContext';
 import { useProfile } from '../../contexts/profileContext';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { TextInput } from 'react-native-paper';
 import { useFonts } from '@expo-google-fonts/inter/useFonts';
 import { CormorantGaramond_600SemiBold_Italic } from '@expo-google-fonts/cormorant-garamond/600SemiBold_Italic';
@@ -14,9 +15,12 @@ export default function profile (){
     const {theme} = useTheme();
     const { name, setName } = useProfile();
 
-    const [isEnabled, setIsEnabled] = useState(false);
+    const [notifyEnabled, setNotifyEnabled] = useState(true);
+    const [reminderEnabled, setReminderEnabled] = useState(false);
     const [editing, setEditing] = useState(false);
-    const toggleSwitch = () => setIsEnabled(previous => !previous);
+
+    const toggleNotify = () => setNotifyEnabled(prev => !prev);
+    const toggleReminder = () => setReminderEnabled(prev => !prev);
 
 
 
@@ -68,6 +72,125 @@ export default function profile (){
                     </View>
                 </View>
 
+                <View style={styles.settingsContainer}>
+                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <MaterialIcons name="auto-stories" size={24} color={theme.primary} />
+                        <Text style={styles.settingTitle}> Future Delivery Alerts</Text>
+                    </View>
+                    <Text style={styles.settingSubtitle}>
+                        Anniversary Surprises
+                    </Text>
+                    <View style={{flexDirection: 'row', width: '100%', justifyContent: 'space-between'}}>
+                        <View style={{flex: 1}}>
+                            <Text style={[styles.settingText, {color: theme.secondary}]}>
+                                Notify me when a 1-year-old letter arrives.
+                            </Text>
+                        </View>
+                        <Switch
+                            trackColor={{false: theme.text, true: theme.primary}}
+                            thumbColor={notifyEnabled ? '#fff' : '#fff'}
+                            onValueChange={toggleNotify}
+                            value={notifyEnabled}
+                        />
+                    </View>
+                    <Text style={styles.settingSubtitle}>
+                        The 5-Years Reach
+                    </Text>
+                    <View style={{flexDirection: 'row', width: '100%', justifyContent: 'space-between'}}>
+                        <View style={{flex: 1}}>
+                            <Text style={[styles.settingText, {color: theme.secondary}]}>
+                                Quiet reminders for long-term time capsules.
+                            </Text>
+                        </View>
+                        <Switch
+                            trackColor={{false: theme.text, true: theme.primary}}
+                            thumbColor={reminderEnabled ? '#fff' : '#fff'}
+                            onValueChange={toggleReminder}
+                            value={reminderEnabled}
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.settingsContainer}>
+                    <Text style={styles.settingTitle}>
+                        Security & Privacy
+                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 18}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="lock-open" size={24} color={theme.secondary} />
+                            <Text style={[styles.settingSubtitle, {color: theme.secondary, paddingTop: 0, paddingLeft: 10}]}>
+                                FaceID Lock
+                            </Text>    
+                        </View>
+                        <TouchableOpacity>
+                            <Feather name="chevron-right" size={20} color={theme.text} />    
+                        </TouchableOpacity>
+                    
+                    </View>
+
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 18}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="visibility-off" size={24} color={theme.secondary} />
+                            <Text style={[styles.settingSubtitle, {color: theme.secondary, paddingTop: 0, paddingLeft: 10}]}>
+                                Ghost Mode
+                            </Text>    
+                        </View>
+                        <TouchableOpacity>
+                            <Feather name="chevron-right" size={20} color={theme.text} />    
+                        </TouchableOpacity>
+                    
+                    </View>
+
+                </View>
+
+                <View style={styles.settingsContainer}>
+                    <Text style={styles.settingTitle}>
+                        Archive & Storage
+                    </Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 18}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <MaterialIcons name="cloud-done" size={24} color={theme.secondary} />
+                            <Text style={[styles.settingSubtitle, {color: theme.secondary, paddingTop: 0, paddingLeft: 10}]}>
+                                Cloud Backup
+                            </Text>    
+                        </View>
+                        <Pressable style={{paddingHorizontal: 8, paddingVertical: 3, backgroundColor: theme.highlight1, borderRadius: 5}}>
+                            <Text style={{color: theme.secondary, fontSize: 12, fontFamily: 'Inter_500Medium'}}>
+                                Active
+                            </Text>
+                         </Pressable>
+                    </View>
+
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 18}}>
+                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                            <Feather name="download" size={24} color={theme.secondary} />
+                            <Text style={[styles.settingSubtitle, {color: theme.secondary, paddingTop: 0, paddingLeft: 10}]}>
+                                Export All Letters
+                            </Text>    
+                        </View>
+                        <TouchableOpacity>
+                            <Feather name="chevron-right" size={20} color={theme.text} />        
+                        </TouchableOpacity>
+                    
+                    </View>
+
+                </View>
+
+                <Pressable
+                    style={{width: '100%', borderWidth: 1, borderColor: theme.text, paddingVertical: 15, borderRadius: 30, marginTop: 35, marginBottom: 18}}
+                >
+                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
+                        <MaterialIcons name="logout" size={15} color={theme.secondary} />
+                        <Text style={[styles.settingSubtitle, {color: theme.secondary, paddingTop: 0, paddingLeft: 10}]}>
+                            Sign Out of DearMe
+                        </Text>
+                    </View>
+                </Pressable>
+
+                <Text style={[styles.settingText, {color: theme.highlight2, fontSize: 12, fontFamily: 'Inter_500Medium', paddingBottom: 30}]}>
+                    DEACTIVATE ARCHIVE
+                </Text>
+
             </ScrollView>
             
         </SafeAreaView>
@@ -118,7 +241,8 @@ const styles = StyleSheet.create ({
     records: {
         flexDirection: 'row',
         //padding: 25,
-        marginTop: 30
+        marginTop: 30,
+        marginBottom: 30
     },
     recordCard: {
         height: 100,
@@ -131,5 +255,27 @@ const styles = StyleSheet.create ({
     recordText: {
         fontFamily: 'Inter_500Medium',
         fontSize: 11
+    },
+    settingsContainer: {
+        padding: 25,
+        width: '100%',
+        borderRadius: 20,
+        backgroundColor: 'white',
+        marginTop: 20,
+        elevation: 0.5
+    },
+    settingTitle: {
+        fontFamily: 'CormorantGaramond_600SemiBold_Italic',
+        fontSize: 25
+    },
+    settingSubtitle: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 16,
+        paddingTop: 18
+    },
+    settingText: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 13,
+        lineHeight: 22
     }
 })
