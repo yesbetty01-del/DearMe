@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import useTheme from '../../store/useTheme'
 
-const Index = () => {
+const Letters = () => {
     const { colors } = useTheme();
     const styles = createStyles(colors);
     return (
@@ -21,4 +21,4 @@ const createStyles = (colors) => {
     });
 };
 
-export default Index;
+export default Letters;
