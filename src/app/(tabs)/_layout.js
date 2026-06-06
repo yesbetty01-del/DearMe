@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import useTheme from '../../store/useTheme'
 import {
     useFonts,
     Fraunces_400Regular,
+    Fraunces_500Medium,
 } from '@expo-google-fonts/fraunces';
 import {
     Inter_300Light, 
@@ -17,6 +19,7 @@ export default function Layout() {
 
     const [fontsLoaded] = useFonts({
         Fraunces_400Regular,
+        Fraunces_500Medium,
         Inter_300Light, 
         Inter_400Regular, 
         Inter_500Medium,
@@ -27,6 +30,8 @@ export default function Layout() {
     }
 
     return(
+        <>
+        <StatusBar style={colors.statusBarStyle} />
         <Tabs screenOptions={{
             tabBarStyle:{
                 backgroundColor: colors.surface,
@@ -86,5 +91,6 @@ export default function Layout() {
             }}/>
 
         </Tabs>
+        </>
     )
 }

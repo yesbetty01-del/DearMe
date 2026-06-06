@@ -11,7 +11,7 @@ export const colorsLight = {
   onPrimary:       '#f5f1e8', // text/icons on sage primary
 
   // ---- Brand / accent ----
-  primary:         '#4a5240', // sage green — buttons, active tab, FAB
+  primary:         '#556b47', // sage green — buttons, active tab, FAB
   primaryHover:    '#3d4435', // pressed / hover state for primary
   secondary:       '#ebe5d4', // soft cream chip / pill background
   accent:          '#c9cdb5', // muted sage highlight / progress fill
@@ -41,6 +41,8 @@ export const colorsLight = {
   moodWarm:        '#d4b896', // soft tan
   moodCloud:       '#b8bcc4', // muted blue-grey
   moodBloom:       '#c89a9a', // dusty rose
+
+  statusBarStyle: 'dark',
 };
 
 // Optional: dark mode (kept in the same warm family)
@@ -78,6 +80,8 @@ export const colorsDark = {
   moodWarm:        '#8a7050',
   moodCloud:       '#6e7480',
   moodBloom:       '#8a6060',
+
+  statusBarStyle: 'light',
 };
 
 export const themes = {
