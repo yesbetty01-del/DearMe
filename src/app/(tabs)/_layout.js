@@ -35,7 +35,8 @@ export default function Layout() {
         <Tabs screenOptions={{
             tabBarStyle:{
                 backgroundColor: colors.surface,
-                borderTopWidth: 0,
+                borderTopWidth: 0.5,
+                borderTopColor: colors.divider,
             },
             tabBarActiveTintColor: colors.primary,
             tabBarInactiveTintColor: colors.mutedForeground,

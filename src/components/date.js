@@ -18,7 +18,7 @@ const createStyles = (colors, fSize, spacing) => StyleSheet.create({
         color: colors.mutedForeground,
         fontSize: fSize.caption,
         letterSpacing: 1.2,
-        fontFamily: 'Inter_400Regular',
+        fontFamily: 'Inter_500Medium',
         textTransform: 'uppercase',
     }
 });
