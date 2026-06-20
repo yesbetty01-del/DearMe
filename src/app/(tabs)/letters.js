@@ -27,7 +27,12 @@ const Letters = () => {
                     label='Delivered'
                     selected={selectedChip === 'Delivered'}
                     onPress={() => setSelectedChip('Delivered')}
-                />      
+                />
+                <Chip
+                    label='Replies'
+                    selected={selectedChip === 'Replies'}
+                    onPress={() => setSelectedChip('Replies')}
+                />    
             </View>
             
         </SafeAreaView>

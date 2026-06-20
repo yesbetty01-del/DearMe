@@ -35,7 +35,6 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: spacing.xl,
-        borderWidth: 1,
         borderColor: colors.border,
         backgroundColor: colors.secondary,
         alignItems: 'center',
@@ -47,7 +46,7 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
     },
     text: {
         fontFamily: 'Inter_500Medium',
-        color: colors.foreground,
+        color: colors.mutedForeground,
         fontSize: fSize.caption,
     },
     selectedText: {

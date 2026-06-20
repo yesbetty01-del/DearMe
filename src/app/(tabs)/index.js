@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import useTheme from '../../store/useTheme'
 import Date from '../../components/date';
 import Header from '../../components/header';
+import PromptCard from '../../components/promptCard';
 
 const Index = () => {
     const { colors, spacing } = useTheme();
@@ -12,6 +13,9 @@ const Index = () => {
         <SafeAreaView style={styles.container}>
             <Date />
             <Header header={'DearMe'} />
+            <View style={{marginVertical: spacing.xl}}>
+                <PromptCard />
+            </View>
         </SafeAreaView>
     );
 }
@@ -22,6 +26,7 @@ const createStyles = (colors, spacing) => {
             backgroundColor: colors.background,
             flex: 1,
             paddingHorizontal: spacing.xl,
+            paddingTop: spacing.md
         },
     });
 };
