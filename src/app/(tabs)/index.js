@@ -8,10 +8,13 @@ import PromptCard from '../../components/promptCard';
 import ArrivedLetterCard from '../../components/arrivedLetterCard';
 import useLetters from '../../store/useLetters';
 import Section from '../../components/section';
+import useJournals from '../../store/useJournals';
+import RecentEntriesCarousel from '../../components/recentEntriesCarousel';
 
 const Index = () => {
     const { colors, spacing } = useTheme();
     const letters = useLetters();
+    const journals = useJournals();
     const styles = createStyles(colors, spacing);
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -21,6 +24,7 @@ const Index = () => {
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={
                     <>
+                    <View style={{paddingHorizontal: spacing.xl}}>
                         <Date />
                         <Header header={'DearMe'} />
                         <View style={{ marginVertical: spacing.xl }}>
@@ -30,12 +34,20 @@ const Index = () => {
                         {letters.length > 0 && (
                             <Section title={'A letter has arrived'} />
                         )}
-                        
+                    </View>   
                     </>
                 }
                 renderItem={({ item }) => (
-                    <ArrivedLetterCard letter={item} />
+                    <View style={{paddingHorizontal: spacing.xl}}>
+                        <ArrivedLetterCard letter={item} />
+                    </View>
+                    
                 )}
+                ListFooterComponent={
+                    <>
+                        <RecentEntriesCarousel journal={journals} />
+                    </>
+                }
                 showsVerticalScrollIndicator={false}
                 
             />
@@ -48,7 +60,6 @@ const createStyles = (colors, spacing) => {
         container: {
             backgroundColor: colors.background,
             flex: 1,
-            paddingHorizontal: spacing.xl,
         },
     });
 };
