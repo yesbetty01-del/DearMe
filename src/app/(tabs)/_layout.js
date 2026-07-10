@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import TabBar from '../../components/navigation/tabBar';
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import useTheme from '../../store/useTheme'
@@ -32,64 +33,15 @@ export default function Layout() {
     return(
         <>
         <StatusBar style={colors.statusBarStyle} />
-        <Tabs screenOptions={{
-            tabBarStyle:{
-                backgroundColor: colors.surface,
-                borderTopWidth: 0.5,
-                borderTopColor: colors.divider,
-            },
-            tabBarActiveTintColor: colors.primary,
-            tabBarInactiveTintColor: colors.mutedForeground,
-        }}>
-            <Tabs.Screen name='index' options={{
-                title: 'Home',
+        <Tabs
+            tabBar={(props) => <TabBar {...props} />}
+            screenOptions={{
                 headerShown: false,
-                tabBarIcon: ({color, focused}) => (
-                    <Feather name="book" size={22} color={color} />
-                ),
-            }}/>
-            
-            <Tabs.Screen name='journal' options={{
-                title: 'Journal',
-                headerShown: false,
-                tabBarIcon: ({color, focused}) => (
-                    <Feather name="book-open" size={22} color={color} />
-                ),
-            }}/>
-
-            <Tabs.Screen name='write' options={{
-                title: 'Write',
-                headerShown: false,
-                tabBarIcon: ({color, focused}) => (
-                    <View style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        backgroundColor: colors.primary,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 15,
-                    }}>
-                        <Feather name='edit-3' size={22} color={colors.onPrimary} />
-                    </View>
-                ),
-            }}/>
-
-            <Tabs.Screen name='letters' options={{
-                title: 'Letters',
-                headerShown: false,
-                tabBarIcon: ({color}) => (
-                    <Feather name="mail" size={22} color={color} />
-                ),
-            }}/>
-
-            <Tabs.Screen name='profile' options={{
-                title: 'Profile',
-                headerShown: false,
-                tabBarIcon: ({color}) => (
-                    <Feather name="user" size={22} color={color} />
-                ),
-            }}/>
+            }}>
+            <Tabs.Screen name='index' />
+            <Tabs.Screen name='journal' />
+            <Tabs.Screen name='letters' />
+            <Tabs.Screen name='profile' />
 
         </Tabs>
         </>
