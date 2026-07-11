@@ -8,6 +8,10 @@ import useTheme from '../../store/useTheme';
 const WriteSheet = forwardRef((props, ref) => {
     const snapPoints = useMemo(() => ['35%'], []);
     const { colors } = useTheme();
+    const handlePress = (route) => {
+        ref.current?.dismiss();
+        router.push(route);
+    }
     return (
         <BottomSheetModal
             ref={ref}
@@ -21,7 +25,7 @@ const WriteSheet = forwardRef((props, ref) => {
                     What would you like to write?
                 </Text>
                 <View style={styles.content}>
-                    <OptionCard name={'book-open'} label={'Journal'} description={'Write a journal entry'} />
+                    <OptionCard name={'book-open'} label={'Journal'} description={'Write a journal entry'} onPress={() => handlePress('/write/journal')} />
                     <OptionCard name={'send'} label={'Letter'} description={'Write a letter to your future self'} />
                 </View>
             </BottomSheetView>

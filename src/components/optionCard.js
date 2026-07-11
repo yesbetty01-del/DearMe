@@ -3,11 +3,11 @@ import { StyleSheet, View, Text, Pressable } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 
-const OptionCard = ({ name, label, description }) => {
+const OptionCard = ({ name, label, description, onPress }) => {
     const { colors, spacing, fSize } = useTheme();
     const styles = CreateStyles(colors, spacing, fSize);
     return (
-        <Pressable style={styles.container}>
+        <Pressable style={styles.container} onPress={onPress}>
             <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.md}}>
                 <View style={styles.fab} >
                     <Icon name={name} color={colors.primary} />

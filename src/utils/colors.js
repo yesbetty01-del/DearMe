@@ -37,9 +37,11 @@ export const colorsLight = {
   shadow:          'rgba(45, 42, 34, 0.08)', // soft card shadow
 
   // ---- Mood / category accents (used in Journal entries) ----
-  moodCalm:        '#c9cdb5', // sage
-  moodWarm:        '#d4b896', // soft tan
-  moodCloud:       '#b8bcc4', // muted blue-grey
+  moodCalm:        '#7a9b8e', // sage
+  moodWarm:        '#d99a5b', // soft tan
+  moodCloud:       '#8a94a6', // muted blue-grey
+  moodQuiet:       '#6b6f8c',
+  moodAlive:       '#c66b52',
   moodBloom:       '#c89a9a', // dusty rose
 
   statusBarStyle: 'dark',
