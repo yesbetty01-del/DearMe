@@ -4,23 +4,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import useTheme from '../../store/useTheme';
 import EntryHeader from '../../components/write/entryHeader';
 import MoodSelector from '../../components/write/moodSelector';
+import InputText from '../../components/write/inputText';
 
 const Journal = () => {
     const { colors, spacing, fSize } = useTheme();
     return (
-        <SafeAreaView edge={['top', 'left', 'right']} style={{flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.lg}}>
-           <KeyboardAvoidingView
-                style={styles.container}
+        
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.lg }}>
+            <EntryHeader title={'JOURNAL ENTRY'} saveTitle={'Save'} />
+            <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
+            <KeyboardAvoidingView
+                style={{flex: 1}}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
-                <EntryHeader title={'JOURNAL ENTRY'} saveTitle={'Save'} />
-                <View style={{width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10}} />
-                <ScrollView>
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps='handled'
+                >
                     <MoodSelector />
-                </ScrollView>   
-            </KeyboardAvoidingView> 
+                    <InputText placeholderText={'Start writting...'} />
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
-            
+
     );
 }
 
