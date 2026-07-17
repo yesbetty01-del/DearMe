@@ -8,13 +8,13 @@ import PromptCard from '../../components/promptCard';
 import ArrivedLetterCard from '../../components/arrivedLetterCard';
 import useLetters from '../../store/useLetters';
 import Section from '../../components/section';
-import useJournals from '../../store/useJournals';
+import journalStore from '../../store/journalStore';
 import RecentEntriesCarousel from '../../components/recentEntriesCarousel';
 
 const Index = () => {
     const { colors, spacing } = useTheme();
     const letters = useLetters();
-    const journals = useJournals();
+    const journals = journalStore();
     const styles = createStyles(colors, spacing);
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
