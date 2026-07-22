@@ -26,7 +26,7 @@ const WriteSheet = forwardRef((props, ref) => {
                 </Text>
                 <View style={styles.content}>
                     <OptionCard name={'book-open'} label={'Journal'} description={'Write a journal entry'} onPress={() => handlePress('/write/journal')} />
-                    <OptionCard name={'send'} label={'Letter'} description={'Write a letter to your future self'} />
+                    <OptionCard name={'send'} label={'Letter'} description={'Write a letter to your future self'} onPress={() => handlePress('/write/letter')} />
                 </View>
             </BottomSheetView>
 
