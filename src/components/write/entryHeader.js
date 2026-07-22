@@ -7,7 +7,7 @@ import Icon from '../icon';
 const EntryHeader = ({ title, saveTitle }) => {
     const { colors, spacing, fSize } = useTheme();
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, {paddingHorizontal: spacing.lg}]}>
             <Pressable
                 onPress={() => router.back()}
                 style={{gap: spacing.xs, flexDirection: 'row', alignItems: 'center'}}

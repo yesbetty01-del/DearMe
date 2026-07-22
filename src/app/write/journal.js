@@ -5,12 +5,13 @@ import useTheme from '../../store/useTheme';
 import EntryHeader from '../../components/write/entryHeader';
 import MoodSelector from '../../components/write/moodSelector';
 import InputText from '../../components/write/inputText';
+import Toolbar from '../../components/write/toolbar';
 
 const Journal = () => {
     const { colors, spacing, fSize } = useTheme();
     return (
         
-        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.lg }}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
             <EntryHeader title={'JOURNAL ENTRY'} saveTitle={'Save'} />
             <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView
@@ -25,6 +26,7 @@ const Journal = () => {
                     <MoodSelector />
                     <InputText placeholderText={'Start writting...'} />
                 </ScrollView>
+                <Toolbar />
             </KeyboardAvoidingView>
         </SafeAreaView>
 

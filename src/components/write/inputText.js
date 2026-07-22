@@ -3,11 +3,11 @@ import { StyleSheet, View, TextInput } from 'react-native';
 import useTheme from '../../store/useTheme';
 
 const InputText = ({placeholderText}) => {
-    const { colors, fSize } = useTheme();
+    const { colors, fSize, spacing } = useTheme();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     return (
-        <View>
+        <View style={{paddingHorizontal: spacing.lg}}>
             <TextInput
             placeholder='Title'
             placeholderTextColor={colors.mutedForeground}

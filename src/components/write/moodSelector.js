@@ -7,7 +7,7 @@ const MoodSelector = () => {
     const { colors, spacing, fSize } = useTheme();
     const [selectedMood, setSelectedMood] = useState('');
     return (
-        <View style={{marginTop: 16}}>
+        <View style={{marginTop: 16, paddingHorizontal: spacing.lg}}>
             <Text style={{fontFamily: 'Inter_400Regular', fontSize: fSize.secondary, color: colors.mutedForeground, letterSpacing: 1.2}}>
                 HOW ARE YOU FEELING?
             </Text>
