@@ -4,6 +4,8 @@ const day = today.toLocaleDateString('en-US', { weekday: 'long' });
 const month = today.toLocaleDateString('en-US', { month: 'long' });
 const dateNo = today.getDate();
 
+const todayFormatted = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
 const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) return 'GOOD MORNING';
@@ -18,4 +20,4 @@ const getPrompt = () => {
     return 'How was your day?';
 }
 
-export { day, month, dateNo, getGreeting, getPrompt };
+export { day, month, dateNo, getGreeting, getPrompt, todayFormatted };

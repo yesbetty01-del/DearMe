@@ -10,11 +10,13 @@ import { letterStore } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
 import RecentEntriesCarousel from '../../components/recentEntriesCarousel';
+import { todayFormatted } from '../../utils/date';
 
 const Index = () => {
     const { colors, spacing } = useTheme();
     const journals = journalStore();
     const styles = createStyles(colors, spacing);
+    const hasLetterToday = letterStore.some(letter => letter.deliveryDate === todayFormatted);
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             <FlatList
@@ -30,7 +32,7 @@ const Index = () => {
                             <PromptCard />
                         </View>
                         
-                        {letterStore.length > 0 && (
+                        { hasLetterToday && (
                             <Section title={'A letter has arrived'} />
                         )}
                     </View>   

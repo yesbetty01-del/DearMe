@@ -2,9 +2,15 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
+import { todayFormatted } from '../utils/date';
 
 const ArrivedLetterCard = ({ letter }) => {
     const { colors, fSize, spacing } = useTheme();
+    const deliveredToday = letter?.deliveryDate === todayFormatted;
+
+    if (!deliveredToday) {
+        return null;
+    }
 
     return (
         <View>
@@ -48,7 +54,7 @@ const ArrivedLetterCard = ({ letter }) => {
                         color: colors.mutedForeground,
                         letterSpacing: 1.2
                     }} >
-                        SENT MAR 14, 2025
+                        {letter?.writtenDate}
                     </Text>
                     <View style={{flexDirection: 'row'}}>
                         <Text style={{
