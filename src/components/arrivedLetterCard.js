@@ -20,7 +20,7 @@ const ArrivedLetterCard = ({ letter }) => {
                 <View style={{
                     paddingVertical: spacing.xs,
                     paddingHorizontal: spacing.md,
-                    backgroundColor: colors.success,
+                    backgroundColor: colors.deliveredBag,
                     alignSelf: 'flex-start',
                     marginBottom: spacing.sm,
                     borderRadius: spacing.xs
@@ -28,7 +28,7 @@ const ArrivedLetterCard = ({ letter }) => {
                     <Text style={{
                         fontFamily: 'Inter_500Medium',
                         fontSize: 11,
-                        color: colors.onPrimary,
+                        color: colors.mutedForeground,
                         letterSpacing: 1.2
                     }}>
                         DELIVERED TODAY

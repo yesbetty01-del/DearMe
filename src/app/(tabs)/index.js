@@ -6,21 +6,20 @@ import Date from '../../components/date';
 import Header from '../../components/header';
 import PromptCard from '../../components/promptCard';
 import ArrivedLetterCard from '../../components/arrivedLetterCard';
-import useLetters from '../../store/useLetters';
+import { letterStore } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
 import RecentEntriesCarousel from '../../components/recentEntriesCarousel';
 
 const Index = () => {
     const { colors, spacing } = useTheme();
-    const letters = useLetters();
     const journals = journalStore();
     const styles = createStyles(colors, spacing);
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             <FlatList
                 contentContainerStyle={{paddingBottom: spacing.lg, paddingTop: spacing.md}}
-                data={letters}
+                data={letterStore}
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={
                     <>
@@ -31,7 +30,7 @@ const Index = () => {
                             <PromptCard />
                         </View>
                         
-                        {letters.length > 0 && (
+                        {letterStore.length > 0 && (
                             <Section title={'A letter has arrived'} />
                         )}
                     </View>   

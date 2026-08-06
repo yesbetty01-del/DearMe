@@ -44,6 +44,9 @@ export const colorsLight = {
   moodAlive:       '#c66b52',
   moodBloom:       '#c89a9a', // dusty rose
 
+  deliveredBag:        '#f0d4bd',
+  scheduledBag:        '#dde3d4',
+
   statusBarStyle: 'dark',
 };
 
@@ -82,6 +85,9 @@ export const colorsDark = {
   moodWarm:        '#8a7050',
   moodCloud:       '#6e7480',
   moodBloom:       '#8a6060',
+
+  deliveredBag:        '#4c3626',
+  scheduledBag:        '#556b47',
 
   statusBarStyle: 'light',
 };
