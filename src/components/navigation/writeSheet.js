@@ -1,6 +1,7 @@
 import { forwardRef, useMemo } from 'react';
 import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import OptionCard from '../optionCard';
 import useTheme from '../../store/useTheme';
@@ -13,6 +14,7 @@ const WriteSheet = forwardRef((props, ref) => {
         router.push(route);
     }
     return (
+        <SafeAreaView edges={['bottom']} style={{backgroundColor: colors.surface}}>
         <BottomSheetModal
             ref={ref}
             index={1}
@@ -31,6 +33,7 @@ const WriteSheet = forwardRef((props, ref) => {
             </BottomSheetView>
 
         </BottomSheetModal>
+        </SafeAreaView>
     )
 })
 

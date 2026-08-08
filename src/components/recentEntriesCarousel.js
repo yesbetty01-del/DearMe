@@ -4,6 +4,7 @@ import Section from './section';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router'
 
 const RecentEntriesCarousel = ({ journal }) => {
     const { colors, fSize, spacing } = useTheme();
@@ -19,7 +20,7 @@ const RecentEntriesCarousel = ({ journal }) => {
 
             <View style={[styles.header, { marginBottom: spacing.md, paddingHorizontal: spacing.xl }]}>
                 <Section title={'Recent entries'} />
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Pressable onPress={() => router.push('/journal')} style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={{
                         fontFamily: 'Inter_500Medium',
                         fontSize: 11,
@@ -29,20 +30,20 @@ const RecentEntriesCarousel = ({ journal }) => {
                         ALL ENTRIES
                     </Text>
                     <Icon name={'chevron-right'} />
-                </View>
+                </Pressable>
             </View>
 
             <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: spacing.xl, gap: spacing.lg }}
             >
                 {journal.slice(0, 3).map((item, index) => (
-                    <Pressable key={item.id} style={{
+                    <Pressable onPress={() => router.push(`entry/${item.id}`)} key={item.id} style={{
                         height: 220,
                         width: 180,
                         borderRadius: spacing.md,
                         overflow: 'hidden'
                     }}>
-                        <ImageBackground source={require('../../image/image.png')} style={{ flex: 1 }} >
+                        <ImageBackground source={item.image} style={{ flex: 1 }} >
                             <LinearGradient
                                 colors={["transparent", "transparent", "rgba(0,0,0,0.9)"]}
                                 start={{ x: 0, y: 0 }}

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View, Pressable, Text, Image } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
+import { router } from 'expo-router'
 
 const JournalEntryCard = ({ journal }) => {
     const { colors, fSize, spacing } = useTheme();
@@ -16,8 +17,9 @@ const JournalEntryCard = ({ journal }) => {
         <View style={{paddingVertical: spacing.sm}}>
             <Pressable
             style={styles.container}
+            onPress={() => router.push(`entry/${journal.id}`)}
         >
-            <Image source={require('../../image/image.png')} style={styles.imageCard} />
+            <Image source={journal.image} style={styles.imageCard} />
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.date}>{formatDate(journal.date)}</Text>
