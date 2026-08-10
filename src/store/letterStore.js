@@ -1,8 +1,12 @@
 export const letterStore = [
-    {
+  {
     id: "1",
     title: "To my future self",
-    content: "I hope you're proud of how far you've come...",
+    mood: "moon",
+    moodName: "QUIET",
+    moodColor: "moodQuiet",
+    image: require('../../image/image.png'),
+    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
     writtenDate: "Aug 1, 2025",
     deliveryDate: "Aug 1, 2026",
     status: "delivered",
@@ -10,7 +14,10 @@ export const letterStore = [
   {
     id: "2",
     title: "My graduation",
-    content: "Today was one of the happiest days...",
+    mood: "flame",
+    moodName: "ALIVE",
+    moodColor: "moodAlive",
+    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
     writtenDate: "May 15, 2025",
     deliveryDate: "Nov 15, 2025",
     status: "delivered",
@@ -18,7 +25,8 @@ export const letterStore = [
   {
     id: "3",
     title: "Dreams for next year",
-    content: "I want to travel more and read fifty books...",
+    image: require('../../image/image.png'),
+    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
     writtenDate: "Jan 1, 2026",
     deliveryDate: "Jan 1, 2027",
     status: "scheduled",

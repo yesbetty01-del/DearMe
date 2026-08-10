@@ -2,21 +2,25 @@ import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
+import { router } from 'expo-router';
+import { letterStore } from '../store/letterStore';
 
-const LetterCard = ({ title, status, content, deliveryDate, writtenDate }) => {
+const LetterCard = ({ id, title, status, content, deliveryDate, writtenDate }) => {
     const { colors, fSize, spacing } = useTheme();
 
     return (
         <View>
 
-            <Pressable style={{
-                marginTop: spacing.lg,
-                padding: spacing.xl,
-                borderRadius: spacing.md,
-                backgroundColor: colors.surface,
-                borderWidth: 0.5,
-                borderColor: colors.border,
-            }} >
+            <Pressable
+                onPress={() => router.push(`letter/${id}`)}
+                style={{
+                    marginTop: spacing.lg,
+                    padding: spacing.xl,
+                    borderRadius: spacing.md,
+                    backgroundColor: colors.surface,
+                    borderWidth: 0.5,
+                    borderColor: colors.border,
+                }} >
                 <View style={{
                     paddingVertical: spacing.xs,
                     paddingHorizontal: spacing.md,
@@ -51,7 +55,7 @@ const LetterCard = ({ title, status, content, deliveryDate, writtenDate }) => {
                     </Text>
                 )}
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: 10 }} />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <View style={{ gap: spacing.xs }}>
                         <Text style={{
                             fontFamily: 'Inter_500Medium',

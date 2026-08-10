@@ -1,34 +1,21 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import journalStore from '../../store/journalStore';
+import { letterStore } from '../../store/letterStore';
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
+import { todayFormatted } from '../../utils/date';
 
 const Id = () => {
     const { colors, spacing, fSize } = useTheme();
     const styles = createStyles(colors, spacing, fSize);
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-us', {
-            year: 'numeric',
-            month: 'short',
-            day: '2-digit',
-        })
-    }
-    const {id} = useLocalSearchParams();
-    const journals = journalStore();
-    const journal = journals.find(
-        (item) => item.id === id
+    const { id } = useLocalSearchParams();
+    const letter = letterStore.find(
+        (item) => (item.id === id)
     );
+    const deliveredToday = letter?.deliveryDate === todayFormatted;
 
-    if(!journal){
-        return(
-            <View>
-                <Text>no journal</Text>
-            </View>
-        )
-    }
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
             <View style={styles.header}>
@@ -47,16 +34,25 @@ const Id = () => {
             <ScrollView
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{paddingBottom: spacing.xxxl}}
+                contentContainerStyle={{ paddingBottom: spacing.xxxl }}
             >
-                <View style={[styles.moodContainer, {backgroundColor: colors[journal.moodColor]}]}>
-                    <Icon name={journal.mood} color={colors.onPrimary}/>
-                    <Text style={styles.moodText}>{journal.moodName}</Text>
-                </View>
-                <Text style={styles.title}>{journal.title}</Text>
-                <Text style={styles.date}>{formatDate(journal.date)}</Text>
-                <Image source={journal.image} style={styles.imageStyle} />
-                <Text style={styles.content}>{journal.content}</Text>
+                {letter.mood &&
+                    <View style={[styles.moodContainer, { backgroundColor: colors[letter.moodColor] }]}>
+                        <Icon name={letter?.mood} color={colors.onPrimary} />
+                        <Text style={styles?.moodText}>{letter.moodName}</Text>
+                    </View>
+                }
+                <Text style={styles.title}>{letter.title}</Text>
+                <Text style={styles.date}>{`arrived ${deliveredToday ? "Today" : letter.deliveryDate}`}</Text>
+                <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
+                {letter.image &&
+                    <Image source={letter.image} style={styles.imageStyle} />
+                }
+                <Text style={styles.content}>{letter.content}</Text>
+                <Text style={styles.content}>{letter.content}</Text>
+                <Text style={styles.content}>{letter.content}</Text>
+                <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
+                <Text style={[styles.date, { alignSelf: 'flex-end' }]}>{`written ${letter.writtenDate}`}</Text>
             </ScrollView>
         </SafeAreaView>
     );
@@ -66,7 +62,7 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
-        paddingHorizontal: spacing.xl,
+        paddingHorizontal: spacing.lg,
     },
     header: {
         flexDirection: 'row',
@@ -96,7 +92,8 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         borderRadius: spacing.sm,
         gap: spacing.xs,
         alignSelf: 'flex-start',
-        backgroundColor: colors.surface
+        backgroundColor: colors.surface,
+        marginBottom: spacing.lg
     },
     moodText: {
         color: colors.onPrimary,
@@ -107,7 +104,7 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         fontFamily: 'Fraunces_400Regular',
         fontSize: fSize.sectionTitle,
         color: colors.foreground,
-        marginVertical: spacing.lg
+        marginBottom: spacing.lg
     },
     date: {
         fontFamily: 'Inter_500Medium',
@@ -120,14 +117,13 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         height: 200,
         width: '100%',
         borderRadius: spacing.md,
-        marginTop: spacing.lg,
+        marginBottom: spacing.lg,
         flex: 1
     },
     content: {
         fontSize: fSize.body,
         lineHeight: fSize.body * 1.5,
         color: colors.foreground,
-        marginTop: spacing.lg
     }
 })
 

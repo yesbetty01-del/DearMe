@@ -9,14 +9,8 @@ const MoodCard = ({ onPress, moodIcon, moodColor, mood, selected}) => {
     const styles = createStyles(colors);
     return (
         <Pressable style={[styles.moodPill, selected && styles.selectedPill, selected && {backgroundColor: moodColor}]} onPress={onPress}>
-            
-            {moodIcon === 'flame' ? (
-                <Octicons name='flame' size={19} color={selected ? colors.onPrimary : moodColor} />
-            ) : (
-                 <Icon name={moodIcon} color={selected ? colors.onPrimary : moodColor} />
-            )}
-             
-            <Text style={[styles.mood, {color: moodColor}, selected && styles.selectedMood]} > {mood} </Text>
+        <Icon name={moodIcon} color={selected ? colors.onPrimary : moodColor} />
+        <Text style={[styles.mood, {color: moodColor}, selected && styles.selectedMood]} > {mood} </Text>
         </Pressable>
     );
 }

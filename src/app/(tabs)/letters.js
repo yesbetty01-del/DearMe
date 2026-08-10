@@ -44,8 +44,7 @@ const Letters = () => {
                 contentContainerStyle={{paddingBottom: spacing.lg}}
                 renderItem={({ item }) => (
                     <>
-                    <LetterCard title={item.title} status={item.status} content={item.content} deliveryDate={item.deliveryDate} writtenDate={item.writtenDate} />
-                    <LetterCard title={item.title} status={item.status} content={item.content} deliveryDate={item.deliveryDate} writtenDate={item.writtenDate} />
+                    <LetterCard id={item.id} title={item.title} status={item.status} content={item.content} deliveryDate={item.deliveryDate} writtenDate={item.writtenDate} />
                     </>
                 )}
             />
