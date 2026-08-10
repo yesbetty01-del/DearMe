@@ -49,13 +49,19 @@ const Id = () => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{paddingBottom: spacing.xxxl}}
             >
-                <View style={[styles.moodContainer, {backgroundColor: colors[journal.moodColor]}]}>
-                    <Icon name={journal.mood} color={colors.onPrimary}/>
-                    <Text style={styles.moodText}>{journal.moodName}</Text>
-                </View>
-                <Text style={styles.title}>{journal.title}</Text>
+                {journal.mood &&
+                    <View style={[styles.moodContainer, {backgroundColor: colors[journal.moodColor]}]}>
+                        <Icon name={journal.mood} color={colors.onPrimary}/>
+                        <Text style={styles.moodText}>{journal.moodName}</Text>
+                    </View>
+                }
+                {journal.title &&
+                    <Text style={styles.title}>{journal.title}</Text>
+                }
                 <Text style={styles.date}>{formatDate(journal.date)}</Text>
-                <Image source={journal.image} style={styles.imageStyle} />
+                {journal.image &&
+                    <Image source={journal.image} style={styles.imageStyle} />
+                }
                 <Text style={styles.content}>{journal.content}</Text>
             </ScrollView>
         </SafeAreaView>

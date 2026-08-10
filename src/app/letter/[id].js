@@ -42,7 +42,9 @@ const Id = () => {
                         <Text style={styles?.moodText}>{letter.moodName}</Text>
                     </View>
                 }
-                <Text style={styles.title}>{letter.title}</Text>
+                {letter.title &&
+                    <Text style={styles.title}>{letter.title}</Text>
+                }
                 <Text style={styles.date}>{`arrived ${deliveredToday ? "Today" : letter.deliveryDate}`}</Text>
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
                 {letter.image &&
