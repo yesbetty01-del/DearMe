@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { letterStore } from '../../store/letterStore';
 import useTheme from '../../store/useTheme';
@@ -51,10 +51,23 @@ const Id = () => {
                     <Image source={letter.image} style={styles.imageStyle} />
                 }
                 <Text style={styles.content}>{letter.content}</Text>
-                <Text style={styles.content}>{letter.content}</Text>
-                <Text style={styles.content}>{letter.content}</Text>
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
                 <Text style={[styles.date, { alignSelf: 'flex-end' }]}>{`written ${letter.writtenDate}`}</Text>
+                <Pressable
+                    style={[
+                        styles.moodContainer,
+                        {
+                            flexDirection: 'row',
+                            marginVertical: spacing.xl,
+                            alignSelf: 'flex-end',
+                            borderWidth: 1,
+                            borderColor: colors.border
+                        }]}
+                    onPress={() => {router.push('/write/reply')}}
+                >
+                    <Icon name={'corner-up-left'} />
+                    <Text style={{fontSize: fSize.caption, fontFamily: 'Inter_500Medium', color: colors.mutedForeground}}>Reply</Text>
+                </Pressable>
             </ScrollView>
         </SafeAreaView>
     );
