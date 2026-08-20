@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { StyleSheet, View, TextInput } from 'react-native';
 import useTheme from '../../store/useTheme';
 
-const InputText = ({placeholderText}) => {
+const InputText = ({placeholderText, fixedTitle}) => {
     const { colors, fSize, spacing } = useTheme();
-    const [title, setTitle] = useState('');
+    const [title, setTitle] = useState(fixedTitle ?? '');
     const [content, setContent] = useState('');
     return (
         <View style={{paddingHorizontal: spacing.lg}}>

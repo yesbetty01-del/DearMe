@@ -63,7 +63,10 @@ const Id = () => {
                             borderWidth: 1,
                             borderColor: colors.border
                         }]}
-                    onPress={() => {router.push('/write/reply')}}
+                    onPress={() => {router.push({
+                        pathname: '/write/reply',
+                        params: {letterId: letter.id}
+                    })}}
                 >
                     <Icon name={'corner-up-left'} />
                     <Text style={{fontSize: fSize.caption, fontFamily: 'Inter_500Medium', color: colors.mutedForeground}}>Reply</Text>
