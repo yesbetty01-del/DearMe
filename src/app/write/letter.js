@@ -8,11 +8,13 @@ import InputText from '../../components/write/inputText';
 import Toolbar from '../../components/write/toolbar';
 import DatePickerButton from '../../components/write/datePickerButton';
 import DatePicker from '../../components/write/datePicker';
+import ScheduleConfirmation from '../../components/write/scheduleConfirmation';
 
 const Letter = () => {
     const { colors } = useTheme();
     const [arrivalDate, setArrivalDate] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [visible, setVisible] = useState(false);
 
     const handleDateChange = (event, selectedDate) => {
         setShowDatePicker(false);
@@ -24,7 +26,8 @@ const Letter = () => {
     return (
 
         <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
-            <EntryHeader title={'FUTURE LETTER'} saveTitle={'Seal'} />
+            <EntryHeader title={'FUTURE LETTER'} saveTitle={'Seal'} onPress={() => setVisible(true)} />
+            <ScheduleConfirmation visible={visible} onClose={() => setVisible(false)} />
             <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
