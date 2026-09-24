@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import useTheme from '../../store/useTheme';
 import Icon from '../icon';
 
-const EntryHeader = ({ title, saveTitle, onPress }) => {
+const EntryHeader = ({ title, saveTitle, onPress, active }) => {
     const { colors, spacing, fSize } = useTheme();
     return (
         <View style={[styles.container, {paddingHorizontal: spacing.lg}]}>
@@ -21,11 +21,12 @@ const EntryHeader = ({ title, saveTitle, onPress }) => {
                 {title}
             </Text>
             <Pressable
+                disabled={!active}
                 style={{
                     paddingHorizontal: spacing.md,
                     paddingVertical: spacing.sm,
                     borderRadius: spacing.xl,
-                    backgroundColor: colors.primary,
+                    backgroundColor: active ? colors.primary : colors.accent,
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}
