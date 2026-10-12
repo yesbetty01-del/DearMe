@@ -1,26 +1,26 @@
 import { useState } from 'react';
-import { StyleSheet, View, TextInput } from 'react-native';
+import { View, TextInput } from 'react-native';
 import useTheme from '../../store/useTheme';
 
-const InputText = ({placeholderText, fixedTitle, value, onChangeText}) => {
+const InputText = ({placeholderText, fixedTitle, title, onChangeTitle, value, onChangeText}) => {
     const { colors, fSize, spacing } = useTheme();
-    const [title, setTitle] = useState(fixedTitle ?? '');
+    const [localTitle, setLocalTitle] = useState(fixedTitle ?? '');
     const [content, setContent] = useState('');
     return (
         <View style={{paddingHorizontal: spacing.lg}}>
             <TextInput
             placeholder='Title'
             placeholderTextColor={colors.mutedForeground}
-            value={title}
-            onChangeText={setTitle}
+            value={title ?? localTitle}
+            onChangeText={onChangeTitle ?? setLocalTitle}
             style={{fontFamily: 'Fraunces_400Regular', fontSize: fSize.cardTitle, color: colors.foreground}}
         />
         <View style={{height: 1, width: '100%', backgroundColor: colors.divider}} />
         <TextInput
             placeholder={placeholderText}
             placeholderTextColor={colors.mutedForeground}
-            value={value}
-            onChangeText={onChangeText}
+            value={value ?? content}
+            onChangeText={onChangeText ?? setContent}
             multiline
             textAlignVertical='top'
             style={{
@@ -36,7 +36,5 @@ const InputText = ({placeholderText, fixedTitle, value, onChangeText}) => {
         
     );
 }
-
-const styles = StyleSheet.create({})
 
 export default InputText;

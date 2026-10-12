@@ -1,6 +1,9 @@
 import { create } from "zustand";
+import { getItems, setItems } from "../utils/storage";
 
-const useJournalsStore = create((set) => ({
+const JOURNALS_STORAGE_KEY = "journals";
+
+const useJournalsStore = create((set, get) => ({
     journals: [
         {
             id: "1",
@@ -33,7 +36,34 @@ const useJournalsStore = create((set) => ({
             content: "Spent the morning with coffee and a book. The kind of day that doesn't ask anything of you — no plans to keep, no one waiting on a reply. I used to think days like this were wasted. That if nothing happened, nothing counted. But I'm starting to suspect the opposite is true, that the days which ask nothing are the ones that give the most back. The light moved across the kitchen table while I read. I noticed it three separate times, which felt like its own small accomplishment."
         },
     ],
+    addJournal: async (entry) => {
+        const journals = [entry, ...get().journals];
+        set({ journals });
+        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+    },
 }))
+
+getItems(JOURNALS_STORAGE_KEY).then((storedJournals) => {
+    if (!storedJournals) return;
+
+    try {
+        const journals = JSON.parse(storedJournals);
+        if (Array.isArray(journals)) {
+            const currentJournals = useJournalsStore.getState().journals;
+            const storedIds = new Set(journals.map((journal) => journal.id));
+            const mergedJournals = [
+                ...currentJournals.filter((journal) => !storedIds.has(journal.id)),
+                ...journals,
+            ];
+            useJournalsStore.setState({ journals: mergedJournals });
+        }
+    } catch (error) {
+        console.error("Error parsing saved journals:", error);
+    }
+});
+
 export default function journalStore() {
     return useJournalsStore((state) => state.journals)
 }
+
+export const addJournal = (entry) => useJournalsStore.getState().addJournal(entry);

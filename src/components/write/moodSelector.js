@@ -3,9 +3,11 @@ import { StyleSheet, View, Text } from 'react-native';
 import useTheme from '../../store/useTheme';
 import MoodCard from './moodCard';
 
-const MoodSelector = () => {
+const MoodSelector = ({ selectedMood, onSelectMood }) => {
     const { colors, spacing, fSize } = useTheme();
-    const [selectedMood, setSelectedMood] = useState('');
+    const [localMood, setLocalMood] = useState('');
+    const currentMood = selectedMood ?? localMood;
+    const selectMood = onSelectMood ?? setLocalMood;
     return (
         <View style={{marginTop: 16, paddingHorizontal: spacing.lg}}>
             <Text style={{fontFamily: 'Inter_400Regular', fontSize: fSize.secondary, color: colors.mutedForeground, letterSpacing: 1.2}}>
@@ -16,36 +18,36 @@ const MoodSelector = () => {
                 moodIcon={'smile'}
                 moodColor={colors.moodCalm}
                 mood={'Calm'}
-                selected={selectedMood === 'Calm'}
-                onPress={() => setSelectedMood('Calm')}
+                selected={currentMood === 'Calm'}
+                onPress={() => selectMood('Calm')}
             />
             <MoodCard
                 moodIcon={'sun'}
                 moodColor={colors.moodWarm}
                 mood={'Warm'}
-                selected={selectedMood === 'Warm'}
-                onPress={() => setSelectedMood('Warm')}
+                selected={currentMood === 'Warm'}
+                onPress={() => selectMood('Warm')}
             />
             <MoodCard
                 moodIcon={'cloud'}
                 moodColor={colors.moodCloud}
                 mood={'Cloudy'}
-                selected={selectedMood === 'Cloudy'}
-                onPress={() => setSelectedMood('Cloudy')}
+                selected={currentMood === 'Cloudy'}
+                onPress={() => selectMood('Cloudy')}
             />
             <MoodCard
                 moodIcon={'moon'}
                 moodColor={colors.moodQuiet}
                 mood={'Quiet'}
-                selected={selectedMood === 'Quiet'}
-                onPress={() => setSelectedMood('Quiet')}
+                selected={currentMood === 'Quiet'}
+                onPress={() => selectMood('Quiet')}
             />
             <MoodCard
                 moodIcon={'flame'}
                 moodColor={colors.moodAlive}
                 mood={'Alive'}
-                selected={selectedMood === 'Alive'}
-                onPress={() => setSelectedMood('Alive')}
+                selected={currentMood === 'Alive'}
+                onPress={() => selectMood('Alive')}
             />
         </View>
         </View>
