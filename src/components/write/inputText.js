@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View, TextInput } from 'react-native';
 import useTheme from '../../store/useTheme';
 
-const InputText = ({placeholderText, fixedTitle}) => {
+const InputText = ({placeholderText, fixedTitle, value, onChangeText}) => {
     const { colors, fSize, spacing } = useTheme();
     const [title, setTitle] = useState(fixedTitle ?? '');
     const [content, setContent] = useState('');
@@ -19,10 +19,9 @@ const InputText = ({placeholderText, fixedTitle}) => {
         <TextInput
             placeholder={placeholderText}
             placeholderTextColor={colors.mutedForeground}
-            value={content}
-            onChangeText={setContent}
+            value={value}
+            onChangeText={onChangeText}
             multiline
-            //scrollEnabled={false}
             textAlignVertical='top'
             style={{
                 fontFamily: 'Fraunces_400Regular',

@@ -1,4 +1,4 @@
-import React from 'react';
+import {useState} from 'react';
 import { StyleSheet, View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useTheme from '../../store/useTheme';
@@ -9,10 +9,11 @@ import Toolbar from '../../components/write/toolbar';
 
 const Journal = () => {
     const { colors, spacing, fSize } = useTheme();
+    const [content, setContent] = useState('');
     return (
         
         <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
-            <EntryHeader title={'JOURNAL ENTRY'} saveTitle={'Save'} />
+            <EntryHeader title={'JOURNAL ENTRY'} saveTitle={'Save'} active={content.trim().length > 0} />
             <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView
                 style={{flex: 1}}
@@ -24,7 +25,7 @@ const Journal = () => {
                     keyboardShouldPersistTaps='handled'
                 >
                     <MoodSelector />
-                    <InputText placeholderText={'Start writting...'} />
+                    <InputText placeholderText={'Start writting...'} value={content} onChangeText={setContent} />
                 </ScrollView>
                 <Toolbar />
             </KeyboardAvoidingView>
