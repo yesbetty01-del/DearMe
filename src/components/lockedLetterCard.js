@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
+import { getDeliveryDateKey } from '../store/letterStore';
 
 const parseDate = (value) => {
     const date = new Date(value);
@@ -13,7 +14,8 @@ const parseDate = (value) => {
 const LockedLetterCard = ({ letter }) => {
     const { colors, spacing } = useTheme();
     const now = new Date();
-    const arrives = parseDate(letter.deliveryDate);
+    const deliveryDateKey = getDeliveryDateKey(letter.deliveryDate);
+    const arrives = deliveryDateKey ? new Date(`${deliveryDateKey}T00:00:00`) : parseDate(letter.deliveryDate);
     const sealed = parseDate(letter.writtenDate);
     const daysLeft = arrives ? Math.max(0, Math.ceil((new Date(arrives.toDateString()) - new Date(now.toDateString())) / 86400000)) : 0;
     const totalDays = arrives && sealed ? Math.max(1, Math.ceil((arrives - sealed) / 86400000)) : 1;

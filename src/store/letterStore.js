@@ -1,34 +1,104 @@
-export const letterStore = [
-  {
-    id: "1",
-    title: "To my future self",
-    mood: "moon",
-    moodName: "QUIET",
-    moodColor: "moodQuiet",
-    image: require('../../image/image.png'),
-    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-    writtenDate: "Aug 1, 2025",
-    deliveryDate: "Aug 1, 2026",
-    status: "delivered",
-  },
-  {
-    id: "2",
-    title: "My graduation",
-    mood: "flame",
-    moodName: "ALIVE",
-    moodColor: "moodAlive",
-    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-    writtenDate: "May 15, 2025",
-    deliveryDate: "Nov 15, 2025",
-    status: "delivered",
-  },
-  {
-    id: "3",
-    title: "Dreams for next year",
-    image: require('../../image/image.png'),
-    content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-    writtenDate: "Jan 1, 2026",
-    deliveryDate: "Jan 1, 2027",
-    status: "scheduled",
-  },
+import { create } from 'zustand';
+import { getItems, setItems } from '../utils/storage';
+
+const STORAGE_KEY = 'letters';
+
+const seedLetters = [
+    {
+        id: '1', title: 'To my future self', mood: 'moon', moodName: 'QUIET', moodColor: 'moodQuiet',
+        image: require('../../image/image.png'),
+        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
+        writtenDate: 'Aug 1, 2025', deliveryDate: '2026-08-01', status: 'delivered', replies: [],
+    },
+    {
+        id: '2', title: 'My graduation', mood: 'flame', moodName: 'ALIVE', moodColor: 'moodAlive',
+        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
+        writtenDate: 'May 15, 2025', deliveryDate: '2025-11-15', status: 'delivered', replies: [],
+    },
+    {
+        id: '3', title: 'Dreams for next year', image: require('../../image/image.png'),
+        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
+        writtenDate: 'Jan 1, 2026', deliveryDate: '2027-01-01', status: 'scheduled', replies: [],
+    },
 ];
+
+export const toLocalDateKey = (value) => {
+    if (typeof value === 'string') {
+        const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+        if (dateOnly) {
+            const [, year, month, day] = dateOnly.map(Number);
+            const daysInMonth = [31, (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1] ? value : '';
+        }
+    }
+
+    const date = value instanceof Date
+        ? value
+        : (typeof value === 'number' || typeof value === 'string') ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+export const getDeliveryDateKey = (value) => toLocalDateKey(value);
+
+export const isLetterAvailable = (letter, now = new Date()) =>
+    !!getDeliveryDateKey(letter.deliveryDate) && getDeliveryDateKey(letter.deliveryDate) <= toLocalDateKey(now);
+
+const withCurrentStatus = (letter, now = new Date()) => ({
+    ...letter,
+    replies: letter.replies || [],
+    status: isLetterAvailable(letter, now) ? 'delivered' : 'scheduled',
+});
+
+const persist = async (letters) => {
+    const saved = await setItems(STORAGE_KEY, JSON.stringify(letters));
+    if (!saved) throw new Error('Could not save your letter. Please try again.');
+};
+
+export const useLetterStore = create((set, get) => ({
+    letters: seedLetters.map(withCurrentStatus),
+    addLetter: async (letter) => {
+        const letters = [withCurrentStatus(letter), ...get().letters];
+        await persist(letters);
+        set({ letters });
+    },
+    addReply: async (letterId, reply) => {
+        const letters = get().letters.map((letter) => letter.id === letterId
+            ? { ...letter, replies: [...(letter.replies || []), reply] }
+            : letter);
+        await persist(letters);
+        set({ letters });
+    },
+    refreshArrivals: async (now = new Date()) => {
+        const letters = get().letters.map((letter) => withCurrentStatus(letter, now));
+        if (letters.some((letter, index) => letter.status !== get().letters[index].status)) {
+            await persist(letters);
+            set({ letters });
+        }
+    },
+}));
+
+getItems(STORAGE_KEY).then(async (storedLetters) => {
+    if (!storedLetters) return;
+    try {
+        const saved = JSON.parse(storedLetters);
+        if (!Array.isArray(saved)) return;
+        const savedIds = new Set(saved.map((letter) => letter.id));
+        const current = useLetterStore.getState().letters;
+        const currentOnly = current.filter((letter) => !savedIds.has(letter.id));
+        const knownIds = new Set([...savedIds, ...currentOnly.map((letter) => letter.id)]);
+        const letters = [...saved.map(withCurrentStatus), ...currentOnly.map(withCurrentStatus), ...seedLetters
+            .filter((letter) => !knownIds.has(letter.id))
+            .map(withCurrentStatus)];
+        useLetterStore.setState({ letters });
+        await persist(letters);
+    } catch (error) {
+        console.error('Error parsing saved letters:', error);
+    }
+});
+
+export const useLetters = () => useLetterStore((state) => state.letters);

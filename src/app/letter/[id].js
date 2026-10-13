@@ -1,20 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { letterStore } from '../../store/letterStore';
+import { useLetterStore, isLetterAvailable, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
-import { todayFormatted } from '../../utils/date';
 
 const Id = () => {
     const { colors, spacing, fSize } = useTheme();
     const styles = createStyles(colors, spacing, fSize);
     const { id } = useLocalSearchParams();
-    const letter = letterStore.find(
-        (item) => (item.id === id)
-    );
-    const deliveredToday = letter?.deliveryDate === todayFormatted;
+    const letters = useLetterStore((state) => state.letters);
+    const refreshArrivals = useLetterStore((state) => state.refreshArrivals);
+    const letter = letters.find((item) => item.id === id);
+    const available = letter ? isLetterAvailable(letter) : false;
+    useEffect(() => { refreshArrivals(); }, [refreshArrivals]);
+
+    if (!letter) return null;
 
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
@@ -36,6 +38,17 @@ const Id = () => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: spacing.xxxl }}
             >
+                {!available ? (
+                    <View style={{ flex: 1, alignItems: 'center', paddingTop: spacing.xxxl }}>
+                        <View style={[styles.pill, { marginBottom: spacing.lg }]}><Icon name="lock" color={colors.primary} size={24} /></View>
+                        <Text style={styles.title}>{letter.title}</Text>
+                        <Text style={styles.date}>SEALED UNTIL</Text>
+                        <Text style={[styles.title, { fontSize: fSize.body, marginTop: spacing.sm }]}>
+                            {new Date(`${getDeliveryDateKey(letter.deliveryDate)}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </Text>
+                        <Text style={[styles.content, { color: colors.mutedForeground, textAlign: 'center' }]}>This letter’s contents stay hidden until it arrives.</Text>
+                    </View>
+                ) : <>
                 {letter.mood &&
                     <View style={[styles.moodContainer, { backgroundColor: colors[letter.moodColor] }]}>
                         <Icon name={letter?.mood} color={colors.onPrimary} />
@@ -45,7 +58,9 @@ const Id = () => {
                 {letter.title &&
                     <Text style={styles.title}>{letter.title}</Text>
                 }
-                <Text style={styles.date}>{`arrived ${deliveredToday ? "Today" : letter.deliveryDate}`}</Text>
+                <Text style={styles.date}>{`arrived ${getDeliveryDateKey(letter.deliveryDate) === toLocalDateKey(new Date())
+                    ? 'Today'
+                    : new Date(`${getDeliveryDateKey(letter.deliveryDate)}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}</Text>
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
                 {letter.image &&
                     <Image source={letter.image} style={styles.imageStyle} />
@@ -71,6 +86,13 @@ const Id = () => {
                     <Icon name={'corner-up-left'} />
                     <Text style={{fontSize: fSize.caption, fontFamily: 'Inter_500Medium', color: colors.mutedForeground}}>Reply</Text>
                 </Pressable>
+                {(letter.replies || []).map((reply) => (
+                    <View key={reply.id} style={{ padding: spacing.lg, backgroundColor: colors.surface, borderRadius: spacing.md, marginTop: spacing.md }}>
+                        <Text style={styles.date}>{reply.writtenDate}</Text>
+                        <Text style={[styles.content, { marginTop: spacing.sm }]}>{reply.content}</Text>
+                    </View>
+                ))}
+                </>}
             </ScrollView>
         </SafeAreaView>
     );

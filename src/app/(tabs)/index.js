@@ -10,10 +10,9 @@ import LockedLetterCard from '../../components/lockedLetterCard';
 import FeaturedReflectionCard from '../../components/home/featuredReflectionCard';
 import WeekMoodTracker from '../../components/home/weekMoodTracker';
 import EarlierEntriesList from '../../components/home/earlierEntriesList';
-import { letterStore } from '../../store/letterStore';
+import { useLetters, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
-import { todayFormatted } from '../../utils/date';
 
 const parseDate = (value) => {
     const date = new Date(value);
@@ -23,14 +22,16 @@ const parseDate = (value) => {
 const Home = () => {
     const { colors, spacing } = useTheme();
     const journals = journalStore();
+    const letterStore = useLetters();
+    const today = toLocalDateKey(new Date());
     const sortedJournals = useMemo(() => [...journals].sort((a, b) => new Date(b.date) - new Date(a.date)), [journals]);
     const featuredEntry = useMemo(() => journals.length
         ? journals[Math.floor(Math.random() * journals.length)]
         : null, [journals]);
     const waitingLetter = useMemo(() => letterStore
-        .filter((letter) => letter.status === 'scheduled' || letter.status === 'waiting')
-        .sort((a, b) => (parseDate(a.deliveryDate)?.getTime() ?? Infinity) - (parseDate(b.deliveryDate)?.getTime() ?? Infinity))[0], []);
-    const arrivedToday = letterStore.filter((letter) => letter.deliveryDate === todayFormatted);
+        .filter((letter) => letter.status === 'scheduled')
+        .sort((a, b) => (parseDate(a.deliveryDate)?.getTime() ?? Infinity) - (parseDate(b.deliveryDate)?.getTime() ?? Infinity))[0], [letterStore]);
+    const arrivedToday = letterStore.filter((letter) => letter.status === 'delivered' && getDeliveryDateKey(letter.deliveryDate) === today);
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>

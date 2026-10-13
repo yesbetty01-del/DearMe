@@ -3,10 +3,15 @@ import { StyleSheet, View, Text, Pressable } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { router } from 'expo-router';
-import { letterStore } from '../store/letterStore';
+import { getDeliveryDateKey } from '../store/letterStore';
 
-const LetterCard = ({ id, title, status, content, deliveryDate, writtenDate }) => {
+const LetterCard = ({ letter }) => {
     const { colors, fSize, spacing } = useTheme();
+    const { id, title, status, content, deliveryDate, writtenDate, replies = [] } = letter;
+    const date = new Date(`${getDeliveryDateKey(deliveryDate)}T00:00:00`);
+    const formattedDeliveryDate = Number.isNaN(date.getTime())
+        ? deliveryDate
+        : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     return (
         <View>
@@ -35,7 +40,7 @@ const LetterCard = ({ id, title, status, content, deliveryDate, writtenDate }) =
                         color: colors.mutedForeground,
                         letterSpacing: 1.2
                     }}>
-                        {status === 'scheduled' ? 'FUTURE LETTER' : 'DELIVERED'}
+                            {status === 'scheduled' ? 'SEALED' : 'DELIVERED'}
                     </Text>
                 </View>
                 <Text style={{
@@ -63,14 +68,14 @@ const LetterCard = ({ id, title, status, content, deliveryDate, writtenDate }) =
                             color: colors.mutedForeground,
                             letterSpacing: 1.2
                         }} >
-                            {status === 'scheduled' ? 'ARRIVES' : 'OPENED'}
+                            {status === 'scheduled' ? 'ARRIVES' : 'ARRIVED'}
                         </Text>
                         <Text style={{
                             fontFamily: 'Inter_500Medium',
                             fontSize: fSize.secondary,
                             color: colors.foreground,
                         }} >
-                            {deliveryDate}
+                            {formattedDeliveryDate}
                         </Text>
                     </View>
                     <View style={{ gap: spacing.xs }}>
@@ -90,6 +95,7 @@ const LetterCard = ({ id, title, status, content, deliveryDate, writtenDate }) =
                         }}>{writtenDate}</Text>
                     </View>
                 </View>
+                {replies.length > 0 && <Text style={{ marginTop: spacing.sm, color: colors.primary, fontFamily: 'Inter_500Medium' }}>{replies.length} {replies.length === 1 ? 'reply' : 'replies'}</Text>}
 
             </Pressable >
         </View >

@@ -1,12 +1,13 @@
 import React from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
-import { todayFormatted } from '../utils/date';
+import { getDeliveryDateKey, toLocalDateKey } from '../store/letterStore';
 
 const ArrivedLetterCard = ({ letter }) => {
     const { colors, fSize, spacing } = useTheme();
-    const deliveredToday = letter?.deliveryDate === todayFormatted;
+    const deliveredToday = getDeliveryDateKey(letter?.deliveryDate) === toLocalDateKey(new Date());
 
     if (!deliveredToday) {
         return null;
@@ -15,7 +16,7 @@ const ArrivedLetterCard = ({ letter }) => {
     return (
         <View>
             
-            <Pressable style={{
+            <Pressable onPress={() => router.push(`/letter/${letter.id}`)} style={{
                 marginTop: spacing.lg,
                 padding: spacing.xl,
                 borderRadius: spacing.md,
