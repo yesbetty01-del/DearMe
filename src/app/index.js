@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import useTheme from '../store/useTheme';
+import { getItems } from '../utils/storage';
 
 const moods = [
     { name: 'calm', color: '#7a9b8e' },
@@ -19,8 +20,15 @@ export default function Splash() {
     const moodAnimations = useRef(moods.map(() => new Animated.Value(0))).current;
 
     useEffect(() => {
-        const timer = setTimeout(() => router.replace('/(tabs)'), 3000);
-        return () => clearTimeout(timer);
+        let active = true;
+        const timer = setTimeout(async () => {
+            const completed = await getItems('onboardingCompleted');
+            if (active) router.replace(completed === 'true' ? '/(tabs)' : '/onboarding');
+        }, 3000);
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
     }, [router]);
 
     useEffect(() => {

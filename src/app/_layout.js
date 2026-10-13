@@ -8,6 +8,7 @@ import useTheme from '../store/useTheme';
 import { useLetterStore } from '../store/letterStore';
 import {
     useFonts,
+    Fraunces_300Light,
     Fraunces_400Regular,
     Fraunces_500Medium,
 } from '@expo-google-fonts/fraunces';
@@ -34,6 +35,7 @@ export default function Layout() {
     }, [refreshArrivals]);
 
     const [fontsLoaded] = useFonts({
+        Fraunces_300Light,
         Fraunces_400Regular,
         Fraunces_500Medium,
         Inter_300Light, 
@@ -49,7 +51,7 @@ export default function Layout() {
             <BottomSheetModalProvider>
                 <Stack screenOptions={{headerShown: false}}>
                     <Stack.Screen name='index'/>
-                    {/* <Stack.Screen name='onboarding'/> */}
+                    <Stack.Screen name='onboarding'/>
                     <Stack.Screen name='(tabs)'/>
                 </Stack>
             </BottomSheetModalProvider>
