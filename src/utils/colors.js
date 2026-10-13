@@ -81,9 +81,11 @@ export const colorsDark = {
   overlay:         'rgba(0, 0, 0, 0.55)',
   shadow:          'rgba(0, 0, 0, 0.4)',
 
-  moodCalm:        '#6b7558',
-  moodWarm:        '#8a7050',
-  moodCloud:       '#6e7480',
+   moodCalm:        '#7a9b8e', // sage
+  moodWarm:        '#d99a5b', // soft tan
+  moodCloud:       '#8a94a6', // muted blue-grey
+  moodQuiet:       '#6b6f8c',
+  moodAlive:       '#c66b52',
   moodBloom:       '#8a6060',
 
   deliveredBag:        '#4c3626',

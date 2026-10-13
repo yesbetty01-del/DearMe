@@ -1,136 +1,109 @@
-// import { StyleSheet, View, Text } from 'react-native';
-// import Ionicons from '@expo/vector-icons/Ionicons';
-// import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-// import { useFonts } from '@expo-google-fonts/inter/useFonts';
-// import { PlayfairDisplay_500Medium_Italic } from '@expo-google-fonts/playfair-display/500Medium_Italic';
-// import { Inter_300Light } from '@expo-google-fonts/inter/300Light';
-// import {useTheme} from '../contexts/themeContext';
-// import { useState, useEffect } from 'react';
-// import { useRouter } from 'expo-router';
-// import { getItems } from '../utils/storage';
+import { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
+import useTheme from '../store/useTheme';
 
-// export default function Splash(){
+const moods = [
+    { name: 'calm', color: '#7a9b8e' },
+    { name: 'warm', color: '#d99a5b' },
+    { name: 'cloudy', color: '#8a94a6' },
+    { name: 'quiet', color: '#6b6f8c' },
+    { name: 'alive', color: '#c66b52' },
+];
 
-//     const {theme} = useTheme();
-//     const router = useRouter();
-//     const [isTimeup, setIsTimeup] = useState(false);
+export default function Splash() {
+    const router = useRouter();
+    const { colors } = useTheme();
+    const moodAnimations = useRef(moods.map(() => new Animated.Value(0))).current;
 
-//     let [fontsLoaded] = useFonts({
-//         PlayfairDisplay_500Medium_Italic,
-//         Inter_300Light, 
-//     });
+    useEffect(() => {
+        const timer = setTimeout(() => router.replace('/(tabs)'), 3000);
+        return () => clearTimeout(timer);
+    }, [router]);
 
-//     const [showOnboarding, setShowOnboarding] = useState(true);
+    useEffect(() => {
+        const animation = Animated.parallel(
+            moodAnimations.map((value, index) =>
+                Animated.timing(value, {
+                    toValue: 1,
+                    delay: 1300 + index * 100,
+                    duration: 400,
+                    useNativeDriver: true,
+                }),
+            ),
+        );
 
-//     const checkOnboardingStatus = async () =>{
-//         try {
-//             const onboardingCompleted = await getItems("onboardingCompleted");
-//             setShowOnboarding(onboardingCompleted != "true");
-//         }
-//         catch (error) {
-//             console.error("Error checking onboarding status:", error);
-//         }
-//     }
+        animation.start();
+        return () => animation.stop();
+    }, []);
 
-//     useEffect(()=> {
-//         checkOnboardingStatus();
-//         const timer = setTimeout(()=> setIsTimeup(true), 3000);
-//         return() => clearTimeout(timer);
-        
-//     }, []);
+    return (
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={styles.iconContainer}>
+                <Ionicons name="mail" size={45} color="#DBDDD7" />
+                <MaterialIcons name="eco" size={50} color="#72604D" style={styles.topIcon} />
+            </View>
 
-//     useEffect(()=> {
-//         if(isTimeup && fontsLoaded){
-//             if(showOnboarding)
-//                 router.replace('/onboarding');
-//             else
-//                 router.replace('/(tabs)');
-//         }
-//     }, [isTimeup, fontsLoaded])
-    
-//     if(!fontsLoaded) return null;
+            <Text style={[styles.title, { color: colors.primary }]}>DearMe</Text>
 
-//     return(
-//         <View style={[styles.container, {backgroundColor: theme.background}]}>
-//             <View style={styles.topContainer}>
-//                 <View style={{flex:1}}/>
+            <View style={styles.moods} accessibilityLabel="Five moods">
+                {moods.map((mood, index) => (
+                    <Animated.View
+                        key={mood.name}
+                        accessibilityLabel={mood.name}
+                        style={[
+                            styles.moodDot,
+                            { backgroundColor: mood.color },
+                            {
+                                opacity: moodAnimations[index],
+                                transform: [{
+                                    translateY: moodAnimations[index].interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [6, 0],
+                                    })
+                                }],
+                            },
+                        ]}
+                    />
+                ))}
+            </View>
+        </View>
+    );
+}
 
-//                 <View style={styles.iconContainer}>
-//                     <Ionicons name="mail" size={45} color="#DBDDD7" />
-//                     <View style={styles.topIcon}>
-//                         <MaterialIcons name="eco" size={50} color="#72604D" />
-//                     </View>
-//                 </View>
-
-//                 <Text style={[styles.title, {color: theme.primary}]}>
-//                     DearMe
-//                 </Text>
-//                 <Text style={[styles.subtitle, {color: theme.text}]}>
-//                     THE LIVING ARCHIVE
-//                 </Text>
-                
-//                 <View style={styles.dots}>
-//                     <Text style={[styles.dot, {color: theme.text}]}>...</Text>
-//                 </View>
-           
-//             </View>
-//             <View style={styles.description}>
-//                 <Text style={[styles.descriptionText, {color: theme.text}]}>
-//                     "Writing to the vesion of you that hasn't arrived yet."
-//                 </Text>
-//             </View>
-//         </View>
-//     )
-// }
-
-// const styles = StyleSheet.create({
-//     container: {
-//         flex: 1,
-//         alignItems: 'center',
-//         justifyContent: 'center'
-//     },
-//     topContainer: {
-//         flex:1,
-//         alignItems: 'center',
-//         justifyContent: 'center'
-//     },
-//     iconContainer: {
-//         width: 50,
-//         height: 50,
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         marginTop: 50,
-//     },
-//     topIcon: {
-//         position: 'absolute',
-//         flex: 1,
-//         top: 5
-//     },
-//     title: {
-//         fontSize: 55,
-//         marginTop: 40,
-//         fontFamily: 'PlayfairDisplay_500Medium_Italic'
-//     },
-//     subtitle: {
-//         marginTop: 5,
-//         fontSize: 11,
-//         fontFamily: 'monospace'
-//     },
-//     dots: {
-//         alignItems: 'center',
-//         justifyContent: 'center',
-//         flex: 1
-//     },
-//     dot: {
-//         fontSize: 50
-//     },
-//     description: {
-//         padding: 35,
-//         paddingBottom: 50
-//     },
-//     descriptionText: {
-//         textAlign: 'center',
-//         fontSize: 18,
-//         fontFamily: 'PlayfairDisplay_500Medium_Italic'
-//     }
-// })
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    iconContainer: {
+        width: 50,
+        height: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    topIcon: {
+        position: 'absolute',
+        top: 5,
+    },
+    title: {
+        fontSize: 55,
+        lineHeight: 66,
+        marginTop: 24,
+        fontFamily: 'Fraunces_500Medium',
+    },
+    moods: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 24,
+    },
+    moodDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+});

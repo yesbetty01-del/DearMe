@@ -48,8 +48,8 @@ export default function Layout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <BottomSheetModalProvider>
                 <Stack screenOptions={{headerShown: false}}>
-                    {/* <Stack.Screen name='index'/>
-                    <Stack.Screen name='onboarding'/> */}
+                    <Stack.Screen name='index'/>
+                    {/* <Stack.Screen name='onboarding'/> */}
                     <Stack.Screen name='(tabs)'/>
                 </Stack>
             </BottomSheetModalProvider>
