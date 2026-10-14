@@ -5,6 +5,7 @@ import { useLetterStore, isLetterAvailable, getDeliveryDateKey, toLocalDateKey }
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
+import { getGapLabel } from '../../utils/date';
 
 const Id = () => {
     const { colors, spacing, fSize } = useTheme();
@@ -86,12 +87,41 @@ const Id = () => {
                     <Icon name={'corner-up-left'} />
                     <Text style={{fontSize: fSize.caption, fontFamily: 'Inter_500Medium', color: colors.mutedForeground}}>Reply</Text>
                 </Pressable>
-                {(letter.replies || []).map((reply) => (
-                    <View key={reply.id} style={{ padding: spacing.lg, backgroundColor: colors.surface, borderRadius: spacing.md, marginTop: spacing.md }}>
-                        <Text style={styles.date}>{reply.writtenDate}</Text>
-                        <Text style={[styles.content, { marginTop: spacing.sm }]}>{reply.content}</Text>
+                {!!letter.replies?.length && <>
+                    <View style={{ marginTop: spacing.xl }}>
+                        <Text style={[styles.date, { marginBottom: spacing.md }]}>YOUR REPLIES</Text>
+                        {letter.replies.map((reply) => {
+                            const replyDate = reply.writtenDate ?? reply.writtenOn ?? reply.date ?? reply.createdAt ?? reply.timestamp;
+                            const sealedDate = letter.writtenDate ?? letter.sealedOn ?? letter.createdAt ?? letter.timestamp;
+
+                            return (
+                                <Pressable
+                                    key={reply.id}
+                                    onPress={() => router.push({ pathname: '/reply/[id]', params: { id: reply.id, letterId: letter.id } })}
+                                    style={{
+                                        position: 'relative',
+                                        marginBottom: spacing.md,
+                                        paddingVertical: spacing.lg,
+                                        paddingRight: spacing.lg,
+                                        paddingLeft: spacing.xxxl,
+                                        borderRadius: spacing.md,
+                                        borderWidth: 1,
+                                        borderColor: colors.border,
+                                        backgroundColor: colors.surface,
+                                    }}
+                                >
+                                    <View style={{ position: 'absolute', left: spacing.lg, top: spacing.lg }}>
+                                        <Icon name="corner-down-right" color={colors.primary} size={14} />
+                                    </View>
+                                    <Text style={styles.date}>
+                                        {replyDate} · {getGapLabel(sealedDate, replyDate)}
+                                    </Text>
+                                    <Text style={[styles.replyText, { marginTop: spacing.sm }]}>{reply.content}</Text>
+                                </Pressable>
+                            );
+                        })}
                     </View>
-                ))}
+                </>}
                 </>}
             </ScrollView>
         </SafeAreaView>
@@ -163,6 +193,12 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
     content: {
         fontSize: fSize.body,
         lineHeight: fSize.body * 1.5,
+        color: colors.foreground,
+    },
+    replyText: {
+        fontFamily: 'Fraunces_400Regular',
+        fontSize: fSize.secondary,
+        lineHeight: fSize.secondary * 1.6,
         color: colors.foreground,
     }
 })

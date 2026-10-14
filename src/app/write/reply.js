@@ -33,7 +33,7 @@ const Reply = () => {
                 content: content.trim(),
                 writtenDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             });
-            router.replace(`/letter/${letter.id}`);
+            router.replace('/(tabs)/letters');
         } catch (error) {
             setSaveError(true);
         }
