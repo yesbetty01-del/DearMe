@@ -4,8 +4,9 @@ import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { getGapLabel, parseCalendarDate } from '../utils/date';
+import HighlightedText from './highlightedText';
 
-const ReflectionCard = ({ entry, reflection }) => {
+const ReflectionCard = ({ entry, reflection, searchQuery = '' }) => {
     const { colors, spacing, fSize } = useTheme();
     const writtenDate = reflection.writtenDate || reflection.writtenOn || reflection.date || reflection.createdAt || reflection.timestamp;
     const date = parseCalendarDate(writtenDate);
@@ -34,7 +35,7 @@ const ReflectionCard = ({ entry, reflection }) => {
                         <Text style={[styles.kicker, { color: colors.foreground }]}>REFLECTION · {date?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) || ''}</Text>
                         <Icon name="arrow-up-right" color={colors.mutedForeground} size={14} />
                     </View>
-                    <Text numberOfLines={3} style={[styles.body, { color: colors.foreground, fontSize: fSize.secondary }]}>{reflection.content}</Text>
+                    <HighlightedText numberOfLines={3} style={[styles.body, { color: colors.foreground, fontSize: fSize.secondary }]} query={searchQuery}>{reflection.content}</HighlightedText>
                 </View>
             </View>
         </Pressable>

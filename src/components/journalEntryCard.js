@@ -3,10 +3,53 @@ import { StyleSheet, View, Pressable, Text, Image } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { router } from 'expo-router'
+import HighlightedText from './highlightedText';
 
-const JournalEntryCard = ({ journal, grouped = false }) => {
+const getSearchSnippet = (content, query) => {
+    const term = query?.trim();
+    if (!term) return content;
+
+    const matchIndex = content.toLocaleLowerCase().indexOf(term.toLocaleLowerCase());
+    if (matchIndex === -1) return content;
+
+    const sentenceBoundary = /[.!?](?=\s|$)|\n/g;
+    const findSentenceStart = (position) => {
+        let start = 0;
+        let boundary;
+        sentenceBoundary.lastIndex = 0;
+        while ((boundary = sentenceBoundary.exec(content)) && boundary.index < position) {
+            start = boundary.index + boundary[0].length;
+        }
+        while (/\s/.test(content[start] || '') && start < content.length) start += 1;
+        return start;
+    };
+    const findSentenceEnd = (position) => {
+        sentenceBoundary.lastIndex = position;
+        const boundary = sentenceBoundary.exec(content);
+        return boundary ? boundary.index + boundary[0].length : content.length;
+    };
+
+    const matchingSentenceStart = findSentenceStart(matchIndex);
+    const matchingSentenceEnd = findSentenceEnd(matchIndex + term.length);
+    const start = matchingSentenceStart > 0
+        ? findSentenceStart(matchingSentenceStart - 1)
+        : matchingSentenceStart;
+    const end = matchingSentenceEnd < content.length
+        ? findSentenceEnd(matchingSentenceEnd)
+        : matchingSentenceEnd;
+    const hasLeadingOmission = content.slice(0, start).trim().length > 0;
+    const hasTrailingOmission = content.slice(end).trim().length > 0;
+    const excerpt = content.slice(start, end).trim();
+
+    return `${hasLeadingOmission ? '… ' : ''}${excerpt}${hasTrailingOmission ? ' …' : ''}`;
+};
+
+const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
     const { colors, fSize, spacing } = useTheme();
     const styles = createStyles(colors, fSize, spacing);
+    const hasBodyMatch = Boolean(searchQuery.trim())
+        && (journal.content || '').toLocaleLowerCase().includes(searchQuery.trim().toLocaleLowerCase());
+    const bodyPreview = getSearchSnippet(journal.content || '', searchQuery);
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString("en-US", {
             month: "short",
@@ -25,8 +68,10 @@ const JournalEntryCard = ({ journal, grouped = false }) => {
                     <Text style={styles.date}>{formatDate(journal.date)}</Text>
                     <Icon name={journal.mood} size={13} />
                 </View>
-                <Text style={styles.title}>{journal.title}</Text>
-                <Text style={styles.entry} numberOfLines={2}>{journal.content}</Text>
+                <HighlightedText style={styles.title} query={searchQuery}>{journal.title}</HighlightedText>
+                <HighlightedText style={styles.entry} numberOfLines={hasBodyMatch ? undefined : 2} query={searchQuery}>
+                    {bodyPreview}
+                </HighlightedText>
             </View>
         </Pressable>
         </View>
