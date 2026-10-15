@@ -1,44 +1,63 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import useTheme from '../../store/useTheme';
-import journalStore, { addReflection } from '../../store/journalStore';
+import journalStore, { addReflection, updateReflection } from '../../store/journalStore';
 import EntryHeader from '../../components/write/entryHeader';
 import InputText from '../../components/write/inputText';
 import Toolbar from '../../components/write/toolbar';
+import useWritingContent from '../../hook/useWritingContent';
 
 const Reflection = () => {
     const { colors, spacing, fSize } = useTheme();
-    const { entryId } = useLocalSearchParams();
+    const { entryId, reflectionId } = useLocalSearchParams();
     const entries = journalStore();
     const entry = entries.find((item) => item.id === entryId);
-    const [content, setContent] = useState('');
+    const reflection = entry?.reflections?.find((item) => item.id === reflectionId);
+    const initialBlocks = reflection?.contentBlocks?.length
+        ? reflection.contentBlocks
+        : reflection
+            ? [
+                ...(reflection.content ? [{ id: `text-${reflectionId}`, type: 'text', value: reflection.content }] : []),
+                ...(reflection.attachments || []),
+            ]
+        : undefined;
+    const writing = useWritingContent(initialBlocks);
     if (!entry) return null;
 
     const saveReflection = async () => {
-        if (!content.trim()) return;
-        await addReflection(entry.id, {
-            id: `${Date.now()}`,
-            content: content.trim(),
-            writtenDate: new Date().toISOString(),
-        });
-        router.replace('/(tabs)/journal');
+        if (!writing.hasWritingContent) return;
+        const updatedReflection = {
+            ...(reflection || {}),
+            id: reflection?.id || `${Date.now()}`,
+            content: writing.content,
+            contentBlocks: writing.contentBlocks,
+            attachments: writing.attachments,
+            writtenDate: reflection?.writtenDate || new Date().toISOString(),
+        };
+        if (reflection) {
+            await updateReflection(entry.id, reflection.id, updatedReflection);
+            router.replace({ pathname: '/reflection/[id]', params: { id: reflection.id, entryId: entry.id } });
+        } else {
+            await addReflection(entry.id, updatedReflection);
+            router.replace('/(tabs)/journal');
+        }
     };
 
     return (
-        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
-            <EntryHeader title="LOOKING BACK" saveTitle="Save" active={!!content.trim()} onPress={saveReflection} />
+        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+            <EntryHeader title="LOOKING BACK" saveTitle="Save" active={writing.hasWritingContent} hasEntry={writing.hasWritingContent} onPress={saveReflection} />
             <View style={{ height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}>
-                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     <View style={{ marginHorizontal: spacing.lg, marginVertical: spacing.xl, padding: spacing.lg, borderLeftWidth: 3, borderLeftColor: colors.primary, backgroundColor: colors.surface }}>
                         <Text style={{ fontFamily: 'Inter_500Medium', color: colors.mutedForeground, paddingBottom: spacing.sm }}>Reflecting on {new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
                         <Text numberOfLines={4} style={{ fontFamily: 'Fraunces_400Regular', fontStyle: 'italic', color: colors.mutedForeground, fontSize: fSize.secondary, lineHeight: fSize.secondary * 1.4 }}>{entry.content}</Text>
                     </View>
-                    <InputText fixedTitle={`Looking back: ${entry.title}`} placeholderText="What do you notice, reading this now?" value={content} onChangeText={setContent} />
+                    <InputText fixedTitle={`Looking back: ${entry.title}`} placeholderText="What do you notice, reading this now?" blocks={writing.blocks} onTextBlockChange={writing.updateTextBlock} onAttachmentReviewed={writing.markAttachmentReviewed} onRemoveAttachment={writing.removeAttachment} />
                 </ScrollView>
-                <Toolbar />
+                <Toolbar onAddAttachments={writing.addAttachments} />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

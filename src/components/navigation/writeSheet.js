@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from 'react';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -17,9 +17,19 @@ const WriteSheet = forwardRef((props, ref) => {
         <SafeAreaView edges={['bottom']} style={{backgroundColor: colors.surface}}>
         <BottomSheetModal
             ref={ref}
-            index={1}
+            index={0}
             snapPoints={snapPoints}
             enablePanDownToClose
+            backdropComponent={(backdropProps) => (
+                <BottomSheetBackdrop
+                    {...backdropProps}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={1}
+                    pressBehavior="close"
+                    style={{ backgroundColor: colors.overlay }}
+                />
+            )}
             backgroundStyle={{backgroundColor: colors.surface}}
         >
             <BottomSheetView style={{flex: 1, padding: 24}}>

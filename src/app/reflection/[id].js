@@ -1,10 +1,13 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import useTheme from '../../store/useTheme';
-import journalStore from '../../store/journalStore';
+import journalStore, { deleteReflection } from '../../store/journalStore';
 import Icon from '../../components/icon';
+import EntryContent from '../../components/entryContent';
+import OverflowMenu from '../../components/overflowMenu';
+import ConfirmationDialog from '../../components/confirmationDialog';
 import { getGapLabel, parseCalendarDate } from '../../utils/date';
 
 const formatDate = (value, options) => parseCalendarDate(value)?.toLocaleDateString('en-US', options) || value || '';
@@ -15,16 +18,37 @@ const ReflectionDetail = () => {
     const entries = journalStore();
     const entry = entries.find((item) => item.id === entryId);
     const reflection = entry?.reflections?.find((item) => item.id === id);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     if (!entry || !reflection) return null;
     const writtenDate = reflection.writtenDate || reflection.writtenOn || reflection.date || reflection.createdAt || reflection.timestamp;
     const accent = colors[entry.moodColor] || colors.primary;
+    const reflectionActions = [
+        { label: 'Edit', onPress: () => router.push({ pathname: '/write/reflection', params: { entryId: entry.id, reflectionId: reflection.id } }) },
+        { label: 'Delete', destructive: true, onPress: () => setConfirmDelete(true) },
+    ];
 
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colors.background }]}>
+            <ConfirmationDialog
+                visible={confirmDelete}
+                title="Delete reflection?"
+                message="This reflection will be permanently deleted."
+                confirmLabel="Delete"
+                onCancel={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                    setConfirmDelete(false);
+                    try {
+                        await deleteReflection(entry.id, reflection.id);
+                        router.replace(`/entry/${entry.id}`);
+                    } catch (error) {
+                        Alert.alert('Could not delete reflection', error?.message || 'Please try again.');
+                    }
+                }}
+            />
             <View style={[styles.header, { paddingHorizontal: spacing.lg }]}>
                 <TouchableOpacity accessibilityLabel="Back" onPress={() => router.back()} style={[styles.back, { borderColor: colors.border }]}><Icon name="chevron-left" color={colors.foreground} size={16} /></TouchableOpacity>
                 <View style={styles.headerTitle}><Icon name="corner-down-right" color={colors.mutedForeground} size={13} /><Text style={[styles.kicker, { color: colors.mutedForeground }]}>REFLECTION</Text></View>
-                <View style={{ width: 36 }} />
+                <OverflowMenu actions={reflectionActions} accessibilityLabel="Reflection options" />
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
                 <View style={[styles.timeline, { paddingHorizontal: spacing.lg, paddingTop: spacing.lg }]}>
@@ -40,7 +64,12 @@ const ReflectionDetail = () => {
                 </TouchableOpacity>
                 <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
                     <View style={styles.dateRow}><View style={[styles.accentLine, { backgroundColor: accent }]} /><Text style={[styles.kicker, { color: accent }]}>{formatDate(writtenDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Text></View>
-                    <Text style={[styles.paragraph, { color: colors.foreground, fontSize: fSize.body, marginTop: spacing.lg }]}>{reflection.content}</Text>
+                    <EntryContent
+                        content={reflection.content}
+                        contentBlocks={reflection.contentBlocks}
+                        attachments={reflection.attachments}
+                        textStyle={[styles.paragraph, { color: colors.foreground, fontSize: fSize.body }]}
+                    />
                     <Text style={[styles.signature, { color: colors.mutedForeground }]}>— You, {getGapLabel(entry.date, writtenDate, true)}</Text>
                 </View>
             </ScrollView>
@@ -49,7 +78,7 @@ const ReflectionDetail = () => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 }, header: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    container: { flex: 1 }, header: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 5, overflow: 'visible' },
     back: { width: 36, height: 36, borderWidth: 1, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 }, kicker: { fontFamily: 'Inter_500Medium', fontSize: 10, letterSpacing: 1.4 },
     timeline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, timelineDate: { fontFamily: 'Fraunces_400Regular', fontSize: 14, marginTop: 3 },

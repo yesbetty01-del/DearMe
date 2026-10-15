@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { getItems, setItems } from '../utils/storage';
 
 const STORAGE_KEY = 'letters';
+const DELETED_LETTERS_STORAGE_KEY = 'deletedLetters';
+let deletedLetterIds = new Set();
 
 const seedLetters = [
     {
@@ -79,9 +81,39 @@ export const useLetterStore = create((set, get) => ({
         await persist(letters);
         set({ letters });
     },
+    updateLetter: async (letterId, updates) => {
+        const letters = get().letters.map((letter) => letter.id === letterId
+            ? withCurrentStatus({ ...letter, ...updates })
+            : letter);
+        await persist(letters);
+        set({ letters });
+    },
+    deleteLetter: async (letterId) => {
+        const nextDeletedIds = new Set(deletedLetterIds).add(letterId);
+        const savedDeletedIds = await setItems(DELETED_LETTERS_STORAGE_KEY, JSON.stringify([...nextDeletedIds]));
+        if (!savedDeletedIds) throw new Error('Could not delete your letter. Please try again.');
+        deletedLetterIds = nextDeletedIds;
+        const letters = get().letters.filter((letter) => letter.id !== letterId);
+        await persist(letters);
+        set({ letters });
+    },
     addReply: async (letterId, reply) => {
         const letters = get().letters.map((letter) => letter.id === letterId
             ? { ...letter, replies: [...(letter.replies || []), reply] }
+            : letter);
+        await persist(letters);
+        set({ letters });
+    },
+    updateReply: async (letterId, replyId, updates) => {
+        const letters = get().letters.map((letter) => letter.id === letterId
+            ? { ...letter, replies: (letter.replies || []).map((reply) => reply.id === replyId ? { ...reply, ...updates } : reply) }
+            : letter);
+        await persist(letters);
+        set({ letters });
+    },
+    deleteReply: async (letterId, replyId) => {
+        const letters = get().letters.map((letter) => letter.id === letterId
+            ? { ...letter, replies: (letter.replies || []).filter((reply) => reply.id !== replyId) }
             : letter);
         await persist(letters);
         set({ letters });
@@ -95,17 +127,24 @@ export const useLetterStore = create((set, get) => ({
     },
 }));
 
-getItems(STORAGE_KEY).then(async (storedLetters) => {
+Promise.all([getItems(STORAGE_KEY), getItems(DELETED_LETTERS_STORAGE_KEY)]).then(async ([storedLetters, storedDeletedIds]) => {
+    try {
+        const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
+        if (Array.isArray(parsedDeletedIds)) deletedLetterIds = new Set(parsedDeletedIds);
+    } catch (error) {
+        console.error('Error parsing deleted letter IDs:', error);
+    }
     if (!storedLetters) return;
     try {
         const saved = JSON.parse(storedLetters);
         if (!Array.isArray(saved)) return;
-        const savedIds = new Set(saved.map((letter) => letter.id));
+        const activeSavedLetters = saved.filter((letter) => !deletedLetterIds.has(letter.id));
+        const savedIds = new Set(activeSavedLetters.map((letter) => letter.id));
         const current = useLetterStore.getState().letters;
-        const currentOnly = current.filter((letter) => !savedIds.has(letter.id));
+        const currentOnly = current.filter((letter) => !deletedLetterIds.has(letter.id) && !savedIds.has(letter.id));
         const knownIds = new Set([...savedIds, ...currentOnly.map((letter) => letter.id)]);
-        const letters = [...saved.map(withCurrentStatus), ...currentOnly.map(withCurrentStatus), ...seedLetters
-            .filter((letter) => !knownIds.has(letter.id))
+        const letters = [...activeSavedLetters.map(withCurrentStatus), ...currentOnly.map(withCurrentStatus), ...seedLetters
+            .filter((letter) => !deletedLetterIds.has(letter.id) && !knownIds.has(letter.id))
             .map(withCurrentStatus)];
         useLetterStore.setState({ letters });
         await persist(letters);

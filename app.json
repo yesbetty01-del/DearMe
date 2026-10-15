@@ -28,7 +28,9 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      ["expo-image-picker", { "photosPermission": "Allow DearMe to access photos you choose to add to a journal entry or letter.", "cameraPermission": "Allow DearMe to take a photo to add to a journal entry or letter." }],
+      ["expo-audio", { "microphonePermission": "Allow DearMe to record voice notes for your writing." }]
     ]
   }
 }

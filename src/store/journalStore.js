@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { getItems, setItems } from "../utils/storage";
 
 const JOURNALS_STORAGE_KEY = "journals";
+const DELETED_JOURNALS_STORAGE_KEY = "deletedJournals";
+let deletedJournalIds = new Set();
 
 const useJournalsStore = create((set, get) => ({
     journals: [
@@ -41,6 +43,22 @@ const useJournalsStore = create((set, get) => ({
         set({ journals });
         await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
     },
+    updateJournal: async (entryId, updates) => {
+        const journals = get().journals.map((journal) => journal.id === entryId ? { ...journal, ...updates } : journal);
+        const saved = await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        if (!saved) throw new Error('Could not save your entry. Please try again.');
+        set({ journals });
+    },
+    deleteJournal: async (entryId) => {
+        const nextDeletedIds = new Set(deletedJournalIds).add(entryId);
+        const savedDeletedIds = await setItems(DELETED_JOURNALS_STORAGE_KEY, JSON.stringify([...nextDeletedIds]));
+        if (!savedDeletedIds) throw new Error('Could not delete your entry. Please try again.');
+        deletedJournalIds = nextDeletedIds;
+        const journals = get().journals.filter((journal) => journal.id !== entryId);
+        const saved = await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        if (!saved) throw new Error('Could not delete your entry. Please try again.');
+        set({ journals });
+    },
     addReflection: async (entryId, reflection) => {
         const journals = get().journals.map((journal) => journal.id === entryId
             ? { ...journal, reflections: [...(journal.reflections || []), reflection] }
@@ -48,18 +66,46 @@ const useJournalsStore = create((set, get) => ({
         set({ journals });
         await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
     },
+    updateReflection: async (entryId, reflectionId, updates) => {
+        const journals = get().journals.map((journal) => journal.id === entryId
+            ? { ...journal, reflections: (journal.reflections || []).map((reflection) => reflection.id === reflectionId ? { ...reflection, ...updates } : reflection) }
+            : journal);
+        const saved = await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        if (!saved) throw new Error('Could not save your reflection. Please try again.');
+        set({ journals });
+    },
+    deleteReflection: async (entryId, reflectionId) => {
+        const journals = get().journals.map((journal) => journal.id === entryId
+            ? { ...journal, reflections: (journal.reflections || []).filter((reflection) => reflection.id !== reflectionId) }
+            : journal);
+        const saved = await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        if (!saved) throw new Error('Could not delete your reflection. Please try again.');
+        set({ journals });
+    },
 }))
 
-getItems(JOURNALS_STORAGE_KEY).then((storedJournals) => {
-    if (!storedJournals) return;
+Promise.all([getItems(JOURNALS_STORAGE_KEY), getItems(DELETED_JOURNALS_STORAGE_KEY)]).then(([storedJournals, storedDeletedIds]) => {
+    try {
+        const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
+        if (Array.isArray(parsedDeletedIds)) deletedJournalIds = new Set(parsedDeletedIds);
+    } catch (error) {
+        console.error("Error parsing deleted journal IDs:", error);
+    }
+    if (!storedJournals) {
+        if (deletedJournalIds.size) useJournalsStore.setState((state) => ({ journals: state.journals.filter((journal) => !deletedJournalIds.has(journal.id)) }));
+        return;
+    }
 
     try {
-        const journals = JSON.parse(storedJournals);
+        const savedJournals = JSON.parse(storedJournals);
+        const journals = Array.isArray(savedJournals)
+            ? savedJournals.filter((journal) => !deletedJournalIds.has(journal.id))
+            : [];
         if (Array.isArray(journals)) {
             const currentJournals = useJournalsStore.getState().journals;
             const storedIds = new Set(journals.map((journal) => journal.id));
             const mergedJournals = [
-                ...currentJournals.filter((journal) => !storedIds.has(journal.id)),
+                ...currentJournals.filter((journal) => !deletedJournalIds.has(journal.id) && !storedIds.has(journal.id)),
                 ...journals,
             ];
             useJournalsStore.setState({ journals: mergedJournals });
@@ -74,4 +120,8 @@ export default function journalStore() {
 }
 
 export const addJournal = (entry) => useJournalsStore.getState().addJournal(entry);
+export const updateJournal = (entryId, updates) => useJournalsStore.getState().updateJournal(entryId, updates);
+export const deleteJournal = (entryId) => useJournalsStore.getState().deleteJournal(entryId);
 export const addReflection = (entryId, reflection) => useJournalsStore.getState().addReflection(entryId, reflection);
+export const updateReflection = (entryId, reflectionId, updates) => useJournalsStore.getState().updateReflection(entryId, reflectionId, updates);
+export const deleteReflection = (entryId, reflectionId) => useJournalsStore.getState().deleteReflection(entryId, reflectionId);

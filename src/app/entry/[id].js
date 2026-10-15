@@ -1,10 +1,13 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import journalStore from '../../store/journalStore';
+import journalStore, { deleteJournal } from '../../store/journalStore';
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
+import EntryContent from '../../components/entryContent';
+import OverflowMenu from '../../components/overflowMenu';
+import ConfirmationDialog from '../../components/confirmationDialog';
 import { parseCalendarDate, getGapLabel, getTimestamp } from '../../utils/date';
 
 const Id = () => {
@@ -22,11 +25,17 @@ const Id = () => {
     const journal = journals.find(
         (item) => item.id === id
     );
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const reflections = [...(journal?.reflections || [])].sort((a, b) => {
         const aDate = a.writtenDate || a.writtenOn || a.date || a.createdAt || a.timestamp;
         const bDate = b.writtenDate || b.writtenOn || b.date || b.createdAt || b.timestamp;
         return getTimestamp(bDate) - getTimestamp(aDate);
     });
+
+    const entryActions = [
+        { label: 'Edit', onPress: () => router.push({ pathname: '/write/journal', params: { editId: journal.id } }) },
+        { label: 'Delete', destructive: true, onPress: () => setConfirmDelete(true) },
+    ];
 
     if(!journal){
         return(
@@ -37,6 +46,22 @@ const Id = () => {
     }
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+            <ConfirmationDialog
+                visible={confirmDelete}
+                title="Delete entry?"
+                message="This entry and its reflections will be permanently deleted."
+                confirmLabel="Delete"
+                onCancel={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                    setConfirmDelete(false);
+                    try {
+                        await deleteJournal(journal.id);
+                        router.replace('/(tabs)/journal');
+                    } catch (error) {
+                        Alert.alert('Could not delete entry', error?.message || 'Please try again.');
+                    }
+                }}
+            />
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.pill}
@@ -44,11 +69,7 @@ const Id = () => {
                 >
                     <Icon name={'chevron-left'} color={colors.foreground} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.pill}
-                >
-                    <Icon name={'more-horizontal'} color={colors.foreground} />
-                </TouchableOpacity>
+                <OverflowMenu actions={entryActions} accessibilityLabel="Entry options" />
             </View>
             <ScrollView
                 style={styles.scrollView}
@@ -68,7 +89,7 @@ const Id = () => {
                 {journal.image &&
                     <Image source={journal.image} style={styles.imageStyle} />
                 }
-                <Text style={styles.content}>{journal.content}</Text>
+                <EntryContent content={journal.content} contentBlocks={journal.contentBlocks} attachments={journal.attachments} textStyle={styles.content} />
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
                 <Pressable
                     style={[styles.reflectButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
@@ -108,6 +129,8 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: spacing.sm,
+        zIndex: 5,
+        overflow: 'visible',
     },
     pill: {
         padding: spacing.xs,

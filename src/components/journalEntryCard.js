@@ -58,7 +58,9 @@ const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
     }
     const date = new Date(journal.date);
     const moodColor = colors[journal.moodColor] || colors.primary;
-    const hasImage = Boolean(journal.image);
+    const attachmentImage = journal.attachments?.find((attachment) => attachment.type === 'image')?.uri;
+    const hasImage = Boolean(attachmentImage || journal.image);
+    const hasVoiceNote = journal.attachments?.some((attachment) => attachment.type === 'audio');
     return (
         <View style={{paddingVertical: spacing.sm}}>
             <Pressable
@@ -66,7 +68,7 @@ const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
             onPress={() => router.push(`entry/${journal.id}`)}
         >
             {hasImage ? (
-                <Image source={journal.image} style={styles.imageCard} />
+                <Image source={attachmentImage ? { uri: attachmentImage } : journal.image} style={styles.imageCard} />
             ) : (
                 <View style={[styles.dateTile, { backgroundColor: `${moodColor}1f`, borderColor: `${moodColor}40` }]}>
                     <Text style={[styles.tileDay, { color: moodColor }]}>{date.getDate()}</Text>
@@ -78,6 +80,12 @@ const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.date}>{formatDate(journal.date)}</Text>
+                    {hasVoiceNote && (
+                        <View style={styles.voiceBadge}>
+                            <Icon name="mic" size={11} color={colors.primary} />
+                            <Text style={[styles.voiceBadgeText, { color: colors.primary }]}>VOICE</Text>
+                        </View>
+                    )}
                     <Icon name={journal.mood} size={13} />
                 </View>
                 <HighlightedText style={styles.title} query={searchQuery}>{journal.title}</HighlightedText>
@@ -141,6 +149,8 @@ const createStyles = (colors, fSize, spacing) => StyleSheet.create({
         alignItems: 'center',
         gap: spacing.sm,
     },
+    voiceBadge: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    voiceBadgeText: { fontFamily: 'Inter_500Medium', fontSize: 9, letterSpacing: 0.6 },
     date: {
         fontFamily: 'Inter_400Regular',
         fontSize: fSize.caption,

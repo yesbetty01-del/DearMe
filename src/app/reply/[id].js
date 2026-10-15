@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import useTheme from '../../store/useTheme';
 import { useLetterStore } from '../../store/letterStore';
 import Icon from '../../components/icon';
+import EntryContent from '../../components/entryContent';
+import OverflowMenu from '../../components/overflowMenu';
+import ConfirmationDialog from '../../components/confirmationDialog';
 import { daysBetweenDates, getGapLabel, parseCalendarDate } from '../../utils/date';
 
 const formatDate = (value, options) => parseCalendarDate(value)?.toLocaleDateString('en-US', options) || value || '';
@@ -17,6 +20,8 @@ const ReplyDetail = () => {
     const letters = useLetterStore((state) => state.letters);
     const letter = letters.find((item) => item.id === letterId);
     const reply = letter?.replies?.find((item) => item.id === id);
+    const deleteReply = useLetterStore((state) => state.deleteReply);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     if (!letter || !reply) return null;
 
     const replyDate = reply.writtenDate ?? reply.writtenOn ?? reply.date ?? reply.createdAt ?? reply.timestamp;
@@ -27,9 +32,29 @@ const ReplyDetail = () => {
     const days = daysBetweenDates(sealedDate, replyDate);
     const gap = getGapLabel(sealedDate, replyDate);
     const accent = colors[letter.moodColor] || colors.primary;
+    const replyActions = [
+        { label: 'Edit', onPress: () => router.push({ pathname: '/write/reply', params: { letterId: letter.id, replyId: reply.id } }) },
+        { label: 'Delete', destructive: true, onPress: () => setConfirmDelete(true) },
+    ];
 
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: colors.background }]}>
+            <ConfirmationDialog
+                visible={confirmDelete}
+                title="Delete reply?"
+                message="This reply will be permanently deleted."
+                confirmLabel="Delete"
+                onCancel={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                    setConfirmDelete(false);
+                    try {
+                        await deleteReply(letter.id, reply.id);
+                        router.replace(`/letter/${letter.id}`);
+                    } catch (error) {
+                        Alert.alert('Could not delete reply', error?.message || 'Please try again.');
+                    }
+                }}
+            />
             <View style={[styles.header, { paddingHorizontal: spacing.lg }]}>
                 <TouchableOpacity accessibilityLabel="Back" onPress={() => router.back()} style={[styles.back, { borderColor: colors.border }]}>
                     <Icon name="chevron-left" color={colors.foreground} size={16} />
@@ -38,7 +63,7 @@ const ReplyDetail = () => {
                     <Icon name="mail" color={colors.mutedForeground} size={13} />
                     <Text style={[styles.kicker, { color: colors.mutedForeground }]}>REPLY</Text>
                 </View>
-                <View style={{ width: 36 }} />
+                <OverflowMenu actions={replyActions} accessibilityLabel="Reply options" />
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.xxxl }}>
@@ -64,10 +89,13 @@ const ReplyDetail = () => {
                         <View style={[styles.accentLine, { backgroundColor: accent }]} />
                         <Text style={[styles.kicker, { color: accent }]}>{formatLong(replyDate)}</Text>
                     </View>
-                    <View style={{ marginTop: spacing.lg, gap: spacing.lg }}>
-                        {paragraphs.map((paragraph, index) => (
-                            <Text key={index} style={[styles.paragraph, { color: colors.foreground, fontSize: fSize.body }]}>{paragraph}</Text>
-                        ))}
+                    <View style={{ marginTop: spacing.lg }}>
+                        <EntryContent
+                            content={paragraphs.join('\n\n')}
+                            contentBlocks={reply.contentBlocks}
+                            attachments={reply.attachments}
+                            textStyle={[styles.paragraph, { color: colors.foreground, fontSize: fSize.body, marginVertical: spacing.sm }]}
+                        />
                     </View>
                     <Text style={[styles.signature, { color: colors.mutedForeground }]}>— You, {days === 0 ? 'the same day' : `${gap} later`}</Text>
                 </View>
@@ -87,7 +115,7 @@ const PressableOriginal = ({ letter, colors, spacing, onPress }) => (
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    header: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    header: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 5, overflow: 'visible' },
     back: { width: 36, height: 36, borderWidth: 1, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     kicker: { fontFamily: 'Inter_500Medium', fontSize: 10, letterSpacing: 1.4 },

@@ -8,17 +8,28 @@ import InputText from '../../components/write/inputText';
 import Toolbar from '../../components/write/toolbar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useLetterStore, isLetterAvailable } from '../../store/letterStore';
+import useWritingContent from '../../hook/useWritingContent';
 
 const Reply = () => {
     const { colors, spacing, fSize } = useTheme();
     const styles = createStyles(colors, spacing, fSize);
-    const { letterId } = useLocalSearchParams();
-    const [content, setContent] = useState('');
+    const { letterId, replyId } = useLocalSearchParams();
     const [saveError, setSaveError] = useState(false);
     const letters = useLetterStore((state) => state.letters);
     const addReply = useLetterStore((state) => state.addReply);
+    const updateReply = useLetterStore((state) => state.updateReply);
     const refreshArrivals = useLetterStore((state) => state.refreshArrivals);
     const letter = letters.find((item) => item.id === letterId);
+    const existingReply = letter?.replies?.find((reply) => reply.id === replyId);
+    const initialBlocks = existingReply?.contentBlocks?.length
+        ? existingReply.contentBlocks
+        : existingReply
+            ? [
+                ...(existingReply.content ? [{ id: `text-${replyId}`, type: 'text', value: existingReply.content }] : []),
+                ...(existingReply.attachments || []),
+            ]
+        : undefined;
+    const writing = useWritingContent(initialBlocks);
     useEffect(() => { refreshArrivals(); }, [refreshArrivals]);
     if (!letter) {
         return null;
@@ -26,22 +37,31 @@ const Reply = () => {
     const available = isLetterAvailable(letter);
 
     const saveReply = async () => {
-        if (!available || !content.trim()) return;
+        if (!available || !writing.hasWritingContent) return;
         try {
-            await addReply(letter.id, {
-                id: `${Date.now()}`,
-                content: content.trim(),
-                writtenDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            });
-            router.replace('/(tabs)/letters');
+            const reply = {
+                ...(existingReply || {}),
+                id: existingReply?.id || `${Date.now()}`,
+                content: writing.content,
+                contentBlocks: writing.contentBlocks,
+                attachments: writing.attachments,
+                writtenDate: existingReply?.writtenDate || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            };
+            if (existingReply) {
+                await updateReply(letter.id, existingReply.id, reply);
+                router.replace({ pathname: '/reply/[id]', params: { id: existingReply.id, letterId: letter.id } });
+            } else {
+                await addReply(letter.id, reply);
+                router.replace('/(tabs)/letters');
+            }
         } catch (error) {
             setSaveError(true);
         }
     };
 
     return (
-        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
-            <EntryHeader title={'REPLY TO LETTER'} saveTitle={'Save'} active={available && !!content.trim()} onPress={saveReply} />
+        <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+            <EntryHeader title={'REPLY TO LETTER'} saveTitle={'Save'} active={available && writing.hasWritingContent} hasEntry={writing.hasWritingContent} onPress={saveReply} />
             <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView
                 style={{flex: 1}}
@@ -49,6 +69,7 @@ const Reply = () => {
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
             >
                 <ScrollView
+                    contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps='handled'
                 >
@@ -70,10 +91,10 @@ const Reply = () => {
                         </View>
                         
                     </View>}
-                    {available && <InputText fixedTitle={`In reply to: ${letter.title}`} placeholderText={'Start writing...'} value={content} onChangeText={setContent} />}
+                    {available && <InputText fixedTitle={`In reply to: ${letter.title}`} placeholderText={'Start writing...'} blocks={writing.blocks} onTextBlockChange={writing.updateTextBlock} onAttachmentReviewed={writing.markAttachmentReviewed} onRemoveAttachment={writing.removeAttachment} />}
                     {saveError && <Text style={[styles.prevLetter, { marginHorizontal: spacing.lg, color: colors.primary }]}>We could not save your reply. Please try again.</Text>}
                 </ScrollView>
-                <Toolbar />
+                <Toolbar onAddAttachments={writing.addAttachments} />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

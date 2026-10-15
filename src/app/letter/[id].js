@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLetterStore, isLetterAvailable, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
+import EntryContent from '../../components/entryContent';
+import OverflowMenu from '../../components/overflowMenu';
+import ConfirmationDialog from '../../components/confirmationDialog';
 import { getGapLabel } from '../../utils/date';
 
 const Id = () => {
@@ -14,13 +17,35 @@ const Id = () => {
     const letters = useLetterStore((state) => state.letters);
     const refreshArrivals = useLetterStore((state) => state.refreshArrivals);
     const letter = letters.find((item) => item.id === id);
+    const deleteLetter = useLetterStore((state) => state.deleteLetter);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const available = letter ? isLetterAvailable(letter) : false;
     useEffect(() => { refreshArrivals(); }, [refreshArrivals]);
+
+    const letterActions = [
+        { label: 'Delete', destructive: true, onPress: () => setConfirmDelete(true) },
+    ];
 
     if (!letter) return null;
 
     return (
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+            <ConfirmationDialog
+                visible={confirmDelete}
+                title="Delete letter?"
+                message="This letter and its replies will be permanently deleted."
+                confirmLabel="Delete"
+                onCancel={() => setConfirmDelete(false)}
+                onConfirm={async () => {
+                    setConfirmDelete(false);
+                    try {
+                        await deleteLetter(letter.id);
+                        router.replace('/(tabs)/letters');
+                    } catch (error) {
+                        Alert.alert('Could not delete letter', error?.message || 'Please try again.');
+                    }
+                }}
+            />
             <View style={styles.header}>
                 <TouchableOpacity
                     style={styles.pill}
@@ -28,11 +53,7 @@ const Id = () => {
                 >
                     <Icon name={'chevron-left'} color={colors.foreground} />
                 </TouchableOpacity>
-                <TouchableOpacity
-                    style={styles.pill}
-                >
-                    <Icon name={'more-horizontal'} color={colors.foreground} />
-                </TouchableOpacity>
+                <OverflowMenu actions={letterActions} accessibilityLabel="Letter options" />
             </View>
             <ScrollView
                 style={styles.scrollView}
@@ -66,7 +87,7 @@ const Id = () => {
                 {letter.image &&
                     <Image source={letter.image} style={styles.imageStyle} />
                 }
-                <Text style={styles.content}>{letter.content}</Text>
+                <EntryContent content={letter.content} contentBlocks={letter.contentBlocks} attachments={letter.attachments} textStyle={styles.content} />
                 <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
                 <Text style={[styles.date, { alignSelf: 'flex-end' }]}>{`written ${letter.writtenDate}`}</Text>
                 <Pressable
@@ -139,6 +160,8 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: spacing.sm,
+        zIndex: 5,
+        overflow: 'visible',
     },
     pill: {
         padding: spacing.xs,
