@@ -34,6 +34,8 @@ const ReflectionDetail = () => {
                 title="Delete reflection?"
                 message="This reflection will be permanently deleted."
                 confirmLabel="Delete"
+                icon="trash-2"
+                confirmColor={colors.destructive}
                 onCancel={() => setConfirmDelete(false)}
                 onConfirm={async () => {
                     setConfirmDelete(false);

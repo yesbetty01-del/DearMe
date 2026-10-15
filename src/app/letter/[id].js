@@ -35,6 +35,8 @@ const Id = () => {
                 title="Delete letter?"
                 message="This letter and its replies will be permanently deleted."
                 confirmLabel="Delete"
+                icon="trash-2"
+                confirmColor={colors.destructive}
                 onCancel={() => setConfirmDelete(false)}
                 onConfirm={async () => {
                     setConfirmDelete(false);

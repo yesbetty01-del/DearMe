@@ -46,6 +46,8 @@ const EntryHeader = ({ title, saveTitle, onPress, active, hasEntry = active }) =
                 title="Leave writing screen?"
                 message="Your unsaved changes will be lost."
                 confirmLabel="Leave"
+                icon="arrow-left"
+                confirmColor={colors.warning}
                 onCancel={() => setConfirmLeave(false)}
                 onConfirm={() => { setConfirmLeave(false); router.back(); }}
             />

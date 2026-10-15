@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import useTheme from '../../store/useTheme';
 import TodayDate from '../../components/date';
 import Header from '../../components/header';
@@ -13,6 +14,7 @@ import EarlierEntriesList from '../../components/home/earlierEntriesList';
 import { useLetters, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
+import { getItems } from '../../utils/storage';
 
 const parseDate = (value) => {
     const date = new Date(value);
@@ -23,14 +25,28 @@ const Home = () => {
     const { colors, spacing } = useTheme();
     const journals = journalStore();
     const letterStore = useLetters();
+    const [hideLockedLetters, setHideLockedLetters] = useState(true);
+    useFocusEffect(useCallback(() => {
+        let isActive = true;
+        getItems('profileSettings').then((savedSettings) => {
+            if (!isActive) return;
+            try {
+                setHideLockedLetters(savedSettings ? JSON.parse(savedSettings).hideLockedLetters === true : false);
+            } catch (error) {
+                console.error('Could not load profile settings:', error);
+                setHideLockedLetters(false);
+            }
+        });
+        return () => { isActive = false; };
+    }, []));
     const today = toLocalDateKey(new Date());
     const sortedJournals = useMemo(() => [...journals].sort((a, b) => new Date(b.date) - new Date(a.date)), [journals]);
     const featuredEntry = useMemo(() => journals.length
         ? journals[Math.floor(Math.random() * journals.length)]
         : null, [journals]);
-    const waitingLetter = useMemo(() => letterStore
+    const waitingLetter = useMemo(() => (hideLockedLetters ? [] : letterStore)
         .filter((letter) => letter.status === 'scheduled')
-        .sort((a, b) => (parseDate(a.deliveryDate)?.getTime() ?? Infinity) - (parseDate(b.deliveryDate)?.getTime() ?? Infinity))[0], [letterStore]);
+        .sort((a, b) => (parseDate(a.deliveryDate)?.getTime() ?? Infinity) - (parseDate(b.deliveryDate)?.getTime() ?? Infinity))[0], [hideLockedLetters, letterStore]);
     const arrivedToday = letterStore.filter((letter) => letter.status === 'delivered' && getDeliveryDateKey(letter.deliveryDate) === today);
 
     return (

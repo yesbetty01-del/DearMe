@@ -60,6 +60,8 @@ const EntryAttachments = ({ attachments = [], onAttachmentReviewed, onRemoveAtta
                 title={`Remove ${attachmentToRemove?.type === 'audio' ? 'voice note' : 'image'}?`}
                 message="This attachment will be removed from the entry."
                 confirmLabel="Remove"
+                icon="trash-2"
+                confirmColor={colors.destructive}
                 onCancel={() => setAttachmentToRemove(null)}
                 onConfirm={() => {
                     if (attachmentToRemove) onRemoveAttachment?.(attachmentToRemove.uri);
