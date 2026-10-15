@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import journalStore from '../../store/journalStore';
 import useTheme from '../../store/useTheme';
 import { router, useLocalSearchParams } from 'expo-router';
 import Icon from '../../components/icon';
+import { parseCalendarDate, getGapLabel, getTimestamp } from '../../utils/date';
 
 const Id = () => {
     const { colors, spacing, fSize } = useTheme();
@@ -21,6 +22,11 @@ const Id = () => {
     const journal = journals.find(
         (item) => item.id === id
     );
+    const reflections = [...(journal?.reflections || [])].sort((a, b) => {
+        const aDate = a.writtenDate || a.writtenOn || a.date || a.createdAt || a.timestamp;
+        const bDate = b.writtenDate || b.writtenOn || b.date || b.createdAt || b.timestamp;
+        return getTimestamp(bDate) - getTimestamp(aDate);
+    });
 
     if(!journal){
         return(
@@ -63,6 +69,29 @@ const Id = () => {
                     <Image source={journal.image} style={styles.imageStyle} />
                 }
                 <Text style={styles.content}>{journal.content}</Text>
+                <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg }} />
+                <Pressable
+                    style={[styles.reflectButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                    onPress={() => router.push({ pathname: '/write/reflection', params: { entryId: journal.id } })}
+                >
+                    <Icon name="corner-down-right" color={colors.primary} size={15} />
+                    <Text style={{ fontFamily: 'Inter_500Medium', color: colors.primary }}>Add a reflection</Text>
+                </Pressable>
+                {!!reflections.length && <View style={{ marginTop: spacing.xl }}>
+                    <Text style={[styles.date, { marginBottom: spacing.md }]}>REFLECTIONS</Text>
+                    {reflections.map((reflection) => {
+                        const reflectedOn = reflection.writtenDate || reflection.writtenOn || reflection.date || reflection.createdAt || reflection.timestamp;
+                        return (
+                            <View key={reflection.id} style={[styles.reflectionNote, { borderColor: colors.border, backgroundColor: colors.surface, marginBottom: spacing.md, padding: spacing.lg, paddingLeft: spacing.xxxl }]}>
+                                <View style={{ position: 'absolute', left: spacing.lg, top: spacing.lg }}>
+                                    <Icon name="corner-down-right" color={colors.primary} size={14} />
+                                </View>
+                                <Text style={styles.date}>{`${parseCalendarDate(reflectedOn)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || ''} · ${getGapLabel(journal.date, reflectedOn, true)}`}</Text>
+                                <Text style={[styles.reflectionText, { color: colors.foreground, fontSize: fSize.secondary }]}>{reflection.content}</Text>
+                            </View>
+                        );
+                    })}
+                </View>}
             </ScrollView>
         </SafeAreaView>
     );
@@ -134,7 +163,13 @@ const createStyles = (colors, spacing, fSize) => StyleSheet.create({
         lineHeight: fSize.body * 1.5,
         color: colors.foreground,
         marginTop: spacing.lg
-    }
+    },
+    reflectButton: {
+        alignSelf: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 7,
+        paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderRadius: 9999,
+    },
+    reflectionNote: { borderWidth: 1, borderRadius: 16 },
+    reflectionText: { fontFamily: 'Fraunces_400Regular', lineHeight: fSize.secondary * 1.6, marginTop: spacing.sm },
 })
 
 export default Id;

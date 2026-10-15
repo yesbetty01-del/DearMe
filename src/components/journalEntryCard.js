@@ -4,7 +4,7 @@ import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { router } from 'expo-router'
 
-const JournalEntryCard = ({ journal }) => {
+const JournalEntryCard = ({ journal, grouped = false }) => {
     const { colors, fSize, spacing } = useTheme();
     const styles = createStyles(colors, fSize, spacing);
     const formatDate = (dateString) => {
@@ -16,7 +16,7 @@ const JournalEntryCard = ({ journal }) => {
     return (
         <View style={{paddingVertical: spacing.sm}}>
             <Pressable
-            style={styles.container}
+            style={[styles.container, grouped && styles.groupedContainer]}
             onPress={() => router.push(`entry/${journal.id}`)}
         >
             <Image source={journal.image} style={styles.imageCard} />
@@ -44,6 +44,10 @@ const createStyles = (colors, fSize, spacing) => StyleSheet.create({
         borderColor: colors.border,
         backgroundColor: colors.surface,
         borderRadius: spacing.md,
+    },
+    groupedContainer: {
+        borderWidth: 0,
+        borderRadius: 0,
     },
     imageCard: {
         width: 80,

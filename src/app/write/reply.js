@@ -40,7 +40,7 @@ const Reply = () => {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
             <EntryHeader title={'REPLY TO LETTER'} saveTitle={'Save'} active={available && !!content.trim()} onPress={saveReply} />
             <View style={{ width: '100%', height: 1, backgroundColor: colors.divider, marginTop: 10 }} />
             <KeyboardAvoidingView

@@ -51,6 +51,16 @@ const parseCalendarDate = (value) => {
     return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const getTimestamp = (value) => {
+    if (value instanceof Date) return Number.isNaN(value.getTime()) ? 0 : value.getTime();
+    if (typeof value === 'number') return value;
+
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) return timestamp;
+
+    return parseCalendarDate(value)?.getTime() || 0;
+};
+
 const getCalendarDay = (value) => {
     const date = parseCalendarDate(value);
     if (!date) return null;
@@ -101,4 +111,5 @@ export {
     daysBetweenDates,
     getGapLabel,
     parseCalendarDate,
+    getTimestamp,
 };

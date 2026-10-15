@@ -41,6 +41,13 @@ const useJournalsStore = create((set, get) => ({
         set({ journals });
         await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
     },
+    addReflection: async (entryId, reflection) => {
+        const journals = get().journals.map((journal) => journal.id === entryId
+            ? { ...journal, reflections: [...(journal.reflections || []), reflection] }
+            : journal);
+        set({ journals });
+        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+    },
 }))
 
 getItems(JOURNALS_STORAGE_KEY).then((storedJournals) => {
@@ -67,3 +74,4 @@ export default function journalStore() {
 }
 
 export const addJournal = (entry) => useJournalsStore.getState().addJournal(entry);
+export const addReflection = (entryId, reflection) => useJournalsStore.getState().addReflection(entryId, reflection);
