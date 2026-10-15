@@ -17,6 +17,7 @@ const Letter = () => {
     const { colors } = useTheme();
     const [arrivalDate, setArrivalDate] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
     const [visible, setVisible] = useState(false);
     const [showSealAnimation, setShowSealAnimation] = useState(false);
     const [content, setContent] = useState('');
@@ -29,6 +30,19 @@ const Letter = () => {
 
         if (selectedDate) {
             setArrivalDate(selectedDate);
+            setShowTimePicker(true);
+        }
+    };
+
+    const handleTimeChange = (event, selectedTime) => {
+        setShowTimePicker(false);
+
+        if (selectedTime) {
+            setArrivalDate((currentDate) => {
+                const arrivalDateTime = new Date(currentDate || selectedTime);
+                arrivalDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+                return arrivalDateTime;
+            });
         }
     };
 
@@ -48,6 +62,7 @@ const Letter = () => {
             ...(mood ? { mood: moodDetails[mood][0], moodName: moodNames[mood], moodColor: moodDetails[mood][1] } : {}),
             writtenDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             deliveryDate,
+            deliveryTime: arrivalDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
             status: 'scheduled',
             replies: [],
         });
@@ -82,6 +97,13 @@ const Letter = () => {
                         <DatePicker
                             date={arrivalDate}
                             onChange={handleDateChange}
+                        />
+                    )}
+                    {showTimePicker && (
+                        <DatePicker
+                            date={arrivalDate}
+                            mode='time'
+                            onChange={handleTimeChange}
                         />
                     )}
                     <MoodSelector selectedMood={mood} onSelectMood={setMood} />

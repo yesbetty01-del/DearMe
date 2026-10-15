@@ -37,14 +37,21 @@ const Home = () => {
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
             <FlatList
                 contentContainerStyle={{ paddingBottom: spacing.xl, paddingTop: spacing.md }}
-                data={arrivedToday}
-                keyExtractor={(item) => item.id}
+                data={[]}
                 ListHeaderComponent={
                     <View style={{ paddingHorizontal: spacing.xl }}>
                         <TodayDate />
                         <Header header="DearMe" />
                         <View style={{ marginTop: spacing.xl }}><PromptCard /></View>
                         <WeekMoodTracker entries={journals} />
+                        {!!arrivedToday.length && (
+                            <View style={{ marginTop: spacing.xl }}>
+                                <Section title="A letter has arrived" />
+                                {arrivedToday.map((letter) => (
+                                    <ArrivedLetterCard key={letter.id} letter={letter} />
+                                ))}
+                            </View>
+                        )}
                         <FeaturedReflectionCard entry={featuredEntry} />
                         {waitingLetter && (
                             <View style={{ marginTop: spacing.xl }}>
@@ -52,10 +59,8 @@ const Home = () => {
                                 <LockedLetterCard letter={waitingLetter} />
                             </View>
                         )}
-                        {!!arrivedToday.length && <Section title="A letter has arrived" />}
                     </View>
                 }
-                renderItem={({ item }) => <View style={{ paddingHorizontal: spacing.xl }}><ArrivedLetterCard letter={item} /></View>}
                 ListFooterComponent={(
                     <EarlierEntriesList
                         entries={sortedJournals.filter((entry) => entry.id !== featuredEntry?.id).slice(0, 3)}

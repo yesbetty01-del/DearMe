@@ -56,13 +56,25 @@ const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
             day: "2-digit",
         })
     }
+    const date = new Date(journal.date);
+    const moodColor = colors[journal.moodColor] || colors.primary;
+    const hasImage = Boolean(journal.image);
     return (
         <View style={{paddingVertical: spacing.sm}}>
             <Pressable
             style={[styles.container, grouped && styles.groupedContainer]}
             onPress={() => router.push(`entry/${journal.id}`)}
         >
-            <Image source={journal.image} style={styles.imageCard} />
+            {hasImage ? (
+                <Image source={journal.image} style={styles.imageCard} />
+            ) : (
+                <View style={[styles.dateTile, { backgroundColor: `${moodColor}1f`, borderColor: `${moodColor}40` }]}>
+                    <Text style={[styles.tileDay, { color: moodColor }]}>{date.getDate()}</Text>
+                    <Text style={[styles.tileMonth, { color: moodColor }]}>
+                        {date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}
+                    </Text>
+                </View>
+            )}
             <View style={styles.content}>
                 <View style={styles.header}>
                     <Text style={styles.date}>{formatDate(journal.date)}</Text>
@@ -98,6 +110,26 @@ const createStyles = (colors, fSize, spacing) => StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: spacing.md
+    },
+    dateTile: {
+        width: 80,
+        height: 80,
+        borderWidth: 1,
+        borderRadius: spacing.md,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    tileDay: {
+        fontFamily: 'Fraunces_400Regular',
+        fontSize: 22,
+        lineHeight: 26,
+    },
+    tileMonth: {
+        marginTop: 2,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 9,
+        letterSpacing: 1.2,
     },
     content: {
         alignItems: 'flex-start',

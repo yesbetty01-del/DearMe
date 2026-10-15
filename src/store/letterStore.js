@@ -45,8 +45,21 @@ export const toLocalDateKey = (value) => {
 
 export const getDeliveryDateKey = (value) => toLocalDateKey(value);
 
-export const isLetterAvailable = (letter, now = new Date()) =>
-    !!getDeliveryDateKey(letter.deliveryDate) && getDeliveryDateKey(letter.deliveryDate) <= toLocalDateKey(now);
+export const isLetterAvailable = (letter, now = new Date()) => {
+    const deliveryDateKey = getDeliveryDateKey(letter.deliveryDate);
+    if (!deliveryDateKey) return false;
+
+    const todayKey = toLocalDateKey(now);
+    if (deliveryDateKey !== todayKey) return deliveryDateKey < todayKey;
+    if (!letter.deliveryTime) return true;
+
+    const timeMatch = /^(\d{2}):(\d{2})$/.exec(letter.deliveryTime);
+    if (!timeMatch) return false;
+
+    const [, hours, minutes] = timeMatch;
+    const deliveryDateTime = new Date(`${deliveryDateKey}T${hours}:${minutes}:00`);
+    return !Number.isNaN(deliveryDateTime.getTime()) && now >= deliveryDateTime;
+};
 
 const withCurrentStatus = (letter, now = new Date()) => ({
     ...letter,
