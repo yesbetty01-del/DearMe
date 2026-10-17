@@ -3,23 +3,30 @@ import { StyleSheet, View, Text, Pressable } from 'react-native';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 
-const OptionCard = ({ name, label, description, onPress }) => {
+const OptionCard = ({ name, label, description, onPress, disabled = false }) => {
     const { colors, spacing, fSize } = useTheme();
     const styles = CreateStyles(colors, spacing, fSize);
     return (
-        <Pressable style={styles.container} onPress={onPress}>
-            <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.md}}>
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${label}. ${description}`}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            style={({ pressed }) => [styles.container, pressed && styles.pressed, disabled && styles.disabled]}
+            onPress={onPress}
+        >
+            <View style={styles.content}>
                 <View style={styles.fab} >
                     <Icon name={name} color={colors.primary} />
                 </View>
-                <View>
-                    <Text style={styles.label}> {label} </Text>
-                    <Text style={styles.description}> {description} </Text>
+                <View style={styles.copy}>
+                    <Text style={styles.label}>{label}</Text>
+                    <Text style={styles.description}>{description}</Text>
                 </View>
             </View>
         </Pressable>
     );
-}
+};
 
 const CreateStyles = (colors, spacing, fSize) => StyleSheet.create({
     container: {
@@ -29,8 +36,12 @@ const CreateStyles = (colors, spacing, fSize) => StyleSheet.create({
         backgroundColor: colors.onPrimary,
         borderRadius: spacing.md,
         borderWidth: 0.5,
-        borderColor: colors.border
+        borderColor: colors.border,
     },
+    content: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    copy: { flex: 1 },
+    pressed: { opacity: 0.72 },
+    disabled: { opacity: 0.55 },
     fab: {
         width: 44,
         height: 44,
@@ -49,6 +60,6 @@ const CreateStyles = (colors, spacing, fSize) => StyleSheet.create({
         fontSize: fSize.secondary,
         color: colors.mutedForeground,
     }
-})
+});
 
 export default OptionCard;

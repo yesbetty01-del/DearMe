@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, View, Alert } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
+import * as Sharing from 'expo-sharing';
 import useTheme from '../../store/useTheme';
 import journalStore from '../../store/journalStore';
 import { useLetters } from '../../store/letterStore';
 import Header from '../../components/header';
 import Icon from '../../components/icon';
 import ConfirmationDialog from '../../components/confirmationDialog';
+import OptionCard from '../../components/optionCard';
+import { createBackupFile, inspectBackupFile, restoreBackupFile } from '../../utils/backup';
 import { getItems, setItems } from '../../utils/storage';
 
 const PROFILE_SETTINGS_KEY = 'profileSettings';
@@ -24,6 +28,8 @@ const Profile = () => {
     const letters = useLetters();
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+    const [busyAction, setBusyAction] = useState(null);
+    const busy = busyAction !== null;
     const styles = createStyles(colors, spacing);
 
     useEffect(() => {
@@ -56,6 +62,96 @@ const Profile = () => {
         setShowSignOutDialog(false);
         router.replace('/onboarding');
     };
+
+    const exportBackup = async () => {
+        if (busy) return;
+        setBusyAction('export');
+        try {
+            const file = await createBackupFile();
+            if (Platform.OS === 'web') {
+                const blob = new Blob([await file.bytes()], { type: 'application/vnd.dearme.backup' });
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = file.uri.split('/').pop() || 'DearMe-backup.dearme';
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                return;
+            }
+            if (!await Sharing.isAvailableAsync()) throw new Error('File sharing is not available on this device.');
+            await Sharing.shareAsync(file.uri, {
+                mimeType: 'application/vnd.dearme.backup',
+                dialogTitle: 'Save your DearMe backup',
+                UTI: 'com.dearme.backup',
+            });
+        } catch (error) {
+            Alert.alert('Backup could not be created', error?.message || 'Please try again.');
+        } finally {
+            setBusyAction(null);
+        }
+    };
+
+    const chooseBackup = async () => {
+        if (busy) return;
+        setBusyAction('restore');
+        try {
+            const selection = await DocumentPicker.getDocumentAsync({
+                type: '*/*',
+                copyToCacheDirectory: true,
+                multiple: false,
+            });
+            if (selection.canceled || !selection.assets?.[0]) {
+                setBusyAction(null);
+                return;
+            }
+
+            const selectedFile = selection.assets[0].file || selection.assets[0].uri;
+            const backup = await inspectBackupFile(selectedFile);
+            const { journals, reflections, letters, replies } = backup.summary;
+            const confirmation = `This backup contains ${journals} journals, ${reflections} reflections, ${letters} letters, and ${replies} replies. Restoring it will replace all DearMe writing on this device.`;
+            if (Platform.OS === 'web') {
+                if (!window.confirm(`Replace local data?\n\n${confirmation}`)) {
+                    setBusyAction(null);
+                    return;
+                }
+                try {
+                    const result = await restoreBackupFile(selectedFile);
+                    window.alert(`Restore complete. ${result.journals} journals and ${result.letters} letters restored.`);
+                } catch (error) {
+                    window.alert(`Restore failed. ${error?.message || 'Please try again.'}`);
+                } finally {
+                    setBusyAction(null);
+                }
+                return;
+            }
+            Alert.alert(
+                'Replace local data?',
+                confirmation,
+                [
+                    { text: 'Cancel', style: 'cancel', onPress: () => setBusyAction(null) },
+                    {
+                        text: 'Replace and restore',
+                        style: 'destructive',
+                        onPress: async () => {
+                            try {
+                                const result = await restoreBackupFile(selectedFile);
+                                Alert.alert('Restore complete', `${result.journals} journals and ${result.letters} letters restored.`);
+                            } catch (error) {
+                                Alert.alert('Restore failed', error?.message || 'Please try again.');
+                            } finally {
+                                setBusyAction(null);
+                            }
+                        },
+                    },
+                ],
+                { cancelable: false },
+            );
+        } catch (error) {
+            setBusyAction(null);
+            Alert.alert('Backup could not be opened', error?.message || 'Choose a valid DearMe backup file.');
+        }
+    };
+
     const moods = [
         { id: 'moodCalm', label: 'Calm', color: colors.moodCalm },
         { id: 'moodWarm', label: 'Warm', color: colors.moodWarm },
@@ -76,126 +172,146 @@ const Profile = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Header header="Profile" />
-                <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-                    onPress={toggleTheme}
-                    style={({ pressed }) => [styles.themeButton, pressed && styles.pressed]}
-                >
-                    <Icon name={theme === 'light' ? 'moon' : 'sun'} color={colors.foreground} size={18} />
+            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <View style={styles.header}>
+                    <Header header="Profile" />
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+                        onPress={toggleTheme}
+                        style={({ pressed }) => [styles.themeButton, pressed && styles.pressed]}
+                    >
+                        <Icon name={theme === 'light' ? 'moon' : 'sun'} color={colors.foreground} size={18} />
+                    </Pressable>
+                </View>
+
+                <View style={styles.profileRow}>
+                    <Image
+                        source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200' }}
+                        style={styles.avatar}
+                        accessibilityLabel="Sophie"
+                    />
+                    <View>
+                        <Text style={styles.name}>Sophie</Text>
+                        <Text style={styles.caption}>Writing since March 2024</Text>
+                    </View>
+                </View>
+
+                <View style={styles.pagesCard}>
+                    <Text style={styles.cardTitle}>Your pages</Text>
+                    <View style={styles.statsRow}>
+                        <Stat value={journals.length} label={journals.length === 1 ? 'entry' : 'entries'} styles={styles} />
+                        <Stat value={sealedCount} label="sealed" styles={styles} />
+                        <Stat value={openedCount} label="opened" styles={styles} />
+                    </View>
+                    {totalMoodEntries > 0 && (
+                        <>
+                            <View style={styles.moodBar}>
+                                {moodCounts.map((mood) => (
+                                    <View
+                                        key={mood.id}
+                                        style={{ flex: mood.count, backgroundColor: mood.color }}
+                                    />
+                                ))}
+                            </View>
+                            <View style={styles.legend}>
+                                {moodCounts.map((mood) => (
+                                    <View key={mood.id} style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: mood.color }]} />
+                                        <Text style={styles.legendText}>{mood.label}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </>
+                    )}
+                </View>
+
+                <SettingsSection title="Reminders" styles={styles}>
+                    <SettingSwitch
+                        icon="mail"
+                        label="Letter arrival"
+                        description="Get notified when a letter is ready to open"
+                        value={settings.arrivalReminders}
+                        onValueChange={(value) => updateSetting('arrivalReminders', value)}
+                        colors={colors}
+                        styles={styles}
+                    />
+                    <SettingSwitch
+                        icon="calendar"
+                        label="Year-old entries"
+                        description="A reminder when an entry reaches its anniversary"
+                        value={settings.yearlyReminders}
+                        onValueChange={(value) => updateSetting('yearlyReminders', value)}
+                        colors={colors}
+                        styles={styles}
+                    />
+                </SettingsSection>
+
+                <SettingsSection title="Privacy" styles={styles}>
+                    <SettingButton
+                        icon="lock"
+                        label="App lock"
+                        detail={settings.appLock || 'Off'}
+                        onPress={chooseAppLock}
+                        colors={colors}
+                        styles={styles}
+                    />
+                    <SettingSwitch
+                        icon="eye-off"
+                        label="Hide locked letters"
+                        description="Keep sealed letters out of your letters list"
+                        value={settings.hideLockedLetters}
+                        onValueChange={(value) => updateSetting('hideLockedLetters', value)}
+                        colors={colors}
+                        styles={styles}
+                    />
+                </SettingsSection>
+
+                <SettingsSection title="Appearance" styles={styles}>
+                    <SettingButton
+                        icon={theme === 'light' ? 'moon' : 'sun'}
+                        label="Theme"
+                        detail={theme === 'light' ? 'Light' : 'Dark'}
+                        onPress={toggleTheme}
+                        colors={colors}
+                        styles={styles}
+                    />
+                </SettingsSection>
+
+                <SettingsSection title="Your data" styles={styles}>
+                    <View style={styles.backupOptions}>
+                        <OptionCard
+                            name="download"
+                            label={busyAction === 'export' ? 'Preparing backup...' : 'Export backup'}
+                            description="Save a portable copy of your writing and attachments."
+                            onPress={exportBackup}
+                            disabled={busy}
+                        />
+                        <OptionCard
+                            name="upload"
+                            label={busyAction === 'restore' ? 'Preparing restore...' : 'Restore backup'}
+                            description="Replace this device data from a DearMe backup."
+                            onPress={chooseBackup}
+                            disabled={busy}
+                        />
+                    </View>
+                </SettingsSection>
+
+                <Pressable onPress={() => setShowSignOutDialog(true)} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
+                    <Icon name="log-out" color={colors.destructive} size={16} />
+                    <Text style={styles.signOutText}>Sign out</Text>
                 </Pressable>
-            </View>
-
-            <View style={styles.profileRow}>
-                <Image
-                    source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200' }}
-                    style={styles.avatar}
-                    accessibilityLabel="Sophie"
-                />
-                <View>
-                    <Text style={styles.name}>Sophie</Text>
-                    <Text style={styles.caption}>Writing since March 2024</Text>
-                </View>
-            </View>
-
-            <View style={styles.pagesCard}>
-                <Text style={styles.cardTitle}>Your pages</Text>
-                <View style={styles.statsRow}>
-                    <Stat value={journals.length} label={journals.length === 1 ? 'entry' : 'entries'} styles={styles} />
-                    <Stat value={sealedCount} label="sealed" styles={styles} />
-                    <Stat value={openedCount} label="opened" styles={styles} />
-                </View>
-                {totalMoodEntries > 0 && (
-                    <>
-                        <View style={styles.moodBar}>
-                            {moodCounts.map((mood) => (
-                                <View
-                                    key={mood.id}
-                                    style={{ flex: mood.count, backgroundColor: mood.color }}
-                                />
-                            ))}
-                        </View>
-                        <View style={styles.legend}>
-                            {moodCounts.map((mood) => (
-                                <View key={mood.id} style={styles.legendItem}>
-                                    <View style={[styles.legendDot, { backgroundColor: mood.color }]} />
-                                    <Text style={styles.legendText}>{mood.label}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    </>
-                )}
-            </View>
-            <SettingsSection title="Reminders" styles={styles}>
-                <SettingSwitch
-                    icon="mail"
-                    label="Letter arrival"
-                    description="Get notified when a letter is ready to open"
-                    value={settings.arrivalReminders}
-                    onValueChange={(value) => updateSetting('arrivalReminders', value)}
-                    colors={colors}
-                    styles={styles}
-                />
-                <SettingSwitch
-                    icon="calendar"
-                    label="Year-old entries"
-                    description="A reminder when an entry reaches its anniversary"
-                    value={settings.yearlyReminders}
-                    onValueChange={(value) => updateSetting('yearlyReminders', value)}
-                    colors={colors}
-                    styles={styles}
-                />
-            </SettingsSection>
-
-            <SettingsSection title="Privacy" styles={styles}>
-                <SettingButton
-                    icon="lock"
-                    label="App lock"
-                    detail={settings.appLock || 'Off'}
-                    onPress={chooseAppLock}
-                    colors={colors}
-                    styles={styles}
-                />
-                <SettingSwitch
-                    icon="eye-off"
-                    label="Hide locked letters"
-                    description="Keep sealed letters out of your letters list"
-                    value={settings.hideLockedLetters}
-                    onValueChange={(value) => updateSetting('hideLockedLetters', value)}
-                    colors={colors}
-                    styles={styles}
-                />
-            </SettingsSection>
-
-            <SettingsSection title="Appearance" styles={styles}>
-                <SettingButton
-                    icon={theme === 'light' ? 'moon' : 'sun'}
-                    label="Theme"
-                    detail={theme === 'light' ? 'Light' : 'Dark'}
-                    onPress={toggleTheme}
-                    colors={colors}
-                    styles={styles}
-                />
-            </SettingsSection>
-
-            <Pressable onPress={() => setShowSignOutDialog(true)} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
-                <Icon name="log-out" color={colors.destructive} size={16} />
-                <Text style={styles.signOutText}>Sign out</Text>
-            </Pressable>
-          </ScrollView>
-          <ConfirmationDialog
-              visible={showSignOutDialog}
-              title="Sign out of DearMe?"
-              message="You’ll return to the welcome screens. Your journal entries and letters will stay on this device."
-              confirmLabel="Sign out"
-              icon="log-out"
-              confirmColor={colors.destructive}
-              onCancel={() => setShowSignOutDialog(false)}
-              onConfirm={signOut}
-          />
+            </ScrollView>
+            <ConfirmationDialog
+                visible={showSignOutDialog}
+                title="Sign out of DearMe?"
+                message="You’ll return to the welcome screens. Your journal entries and letters will stay on this device."
+                confirmLabel="Sign out"
+                icon="log-out"
+                confirmColor={colors.destructive}
+                onCancel={() => setShowSignOutDialog(false)}
+                onConfirm={signOut}
+            />
         </SafeAreaView>
     );
 };
@@ -239,145 +355,148 @@ const SettingButton = ({ icon, label, detail, onPress, colors, styles }) => (
     </Pressable>
 );
 
-const createStyles = (colors, spacing) => StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.background,
-    },
-    content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: spacing.sm,
-    },
-    themeButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    pressed: { opacity: 0.65 },
-    profileRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: spacing.xl,
-        marginBottom: spacing.xl,
-    },
-    avatar: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        marginRight: spacing.md,
-        backgroundColor: colors.surfaceAlt,
-    },
-    name: {
-        color: colors.foreground,
-        fontSize: 18,
-        fontFamily: 'Fraunces_400Regular',
-    },
-    caption: {
-        color: colors.mutedForeground,
-        fontSize: 12,
-        marginTop: 3,
-    },
-    pagesCard: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderWidth: 1,
-        borderRadius: 16,
-        padding: spacing.md,
-    },
-    cardTitle: {
-        color: colors.mutedForeground,
-        fontSize: 12,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-    },
-    statsRow: {
-        flexDirection: 'row',
-        marginTop: spacing.md,
-    },
-    stat: { flex: 1 },
-    statValue: {
-        color: colors.foreground,
-        fontSize: 23,
-        fontFamily: 'Fraunces_400Regular',
-    },
-    statLabel: {
-        color: colors.mutedForeground,
-        fontSize: 12,
-        marginTop: 2,
-    },
-    moodBar: {
-        height: 6,
-        flexDirection: 'row',
-        overflow: 'hidden',
-        borderRadius: 3,
-        marginTop: spacing.md,
-    },
-    legend: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        columnGap: spacing.sm,
-        rowGap: spacing.xs,
-        marginTop: spacing.sm,
-    },
-    legendItem: { flexDirection: 'row', alignItems: 'center' },
-    legendDot: { width: 6, height: 6, borderRadius: 3, marginRight: 5 },
-    legendText: { color: colors.mutedForeground, fontSize: 11 },
-    settingsSection: { marginTop: spacing.xl },
-    sectionTitle: {
-        color: colors.mutedForeground,
-        fontSize: 12,
-        letterSpacing: 2,
-        textTransform: 'uppercase',
-        marginBottom: spacing.sm,
-    },
-    settingsCard: {
-        backgroundColor: colors.surface,
-        borderColor: colors.border,
-        borderWidth: 1,
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    settingRow: {
-        minHeight: 58,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.divider,
-    },
-    settingIcon: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        backgroundColor: colors.secondary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: spacing.md,
-    },
-    settingCopy: { flex: 1 },
-    settingLabel: { color: colors.foreground, fontSize: 14 },
-    settingDescription: { color: colors.mutedForeground, fontSize: 11, marginTop: 3 },
-    settingDetail: { color: colors.mutedForeground, fontSize: 12, marginRight: spacing.xs },
-    signOut: {
-        minHeight: 48,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: spacing.sm,
-        marginTop: spacing.xl,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    signOutText: { color: colors.destructive, fontSize: 14 },
-});
+const createStyles = (colors, spacing) => {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxxl },
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingTop: spacing.sm,
+        },
+        themeButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        pressed: { opacity: 0.65 },
+        profileRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: spacing.xl,
+            marginBottom: spacing.xl,
+        },
+        avatar: {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            marginRight: spacing.md,
+            backgroundColor: colors.surfaceAlt,
+        },
+        name: {
+            color: colors.foreground,
+            fontSize: 18,
+            fontFamily: 'Fraunces_400Regular',
+        },
+        caption: {
+            color: colors.mutedForeground,
+            fontSize: 12,
+            marginTop: 3,
+        },
+        pagesCard: {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 16,
+            padding: spacing.md,
+        },
+        cardTitle: {
+            color: colors.mutedForeground,
+            fontSize: 12,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+        },
+        statsRow: {
+            flexDirection: 'row',
+            marginTop: spacing.md,
+        },
+        stat: { flex: 1 },
+        statValue: {
+            color: colors.foreground,
+            fontSize: 23,
+            fontFamily: 'Fraunces_400Regular',
+        },
+        statLabel: {
+            color: colors.mutedForeground,
+            fontSize: 12,
+            marginTop: 2,
+        },
+        moodBar: {
+            height: 6,
+            flexDirection: 'row',
+            overflow: 'hidden',
+            borderRadius: 3,
+            marginTop: spacing.md,
+        },
+        legend: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            columnGap: spacing.sm,
+            rowGap: spacing.xs,
+            marginTop: spacing.sm,
+        },
+        legendItem: { flexDirection: 'row', alignItems: 'center' },
+        legendDot: { width: 6, height: 6, borderRadius: 3, marginRight: 5 },
+        legendText: { color: colors.mutedForeground, fontSize: 11 },
+        settingsSection: { marginTop: spacing.xl },
+        sectionTitle: {
+            color: colors.mutedForeground,
+            fontSize: 12,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            marginBottom: spacing.sm,
+        },
+        settingsCard: {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 16,
+            overflow: 'hidden',
+        },
+        settingRow: {
+            minHeight: 58,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.divider,
+        },
+        settingIcon: {
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: colors.secondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: spacing.md,
+        },
+        settingCopy: { flex: 1 },
+        settingLabel: { color: colors.foreground, fontSize: 14 },
+        settingDescription: { color: colors.mutedForeground, fontSize: 11, marginTop: 3 },
+        settingDetail: { color: colors.mutedForeground, fontSize: 12, marginRight: spacing.xs },
+        backupOptions: { padding: spacing.md, gap: spacing.md },
+        signOut: {
+            minHeight: 48,
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: spacing.sm,
+            marginTop: spacing.xl,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        signOutText: { color: colors.destructive, fontSize: 14 },
+    });
+};
 
 export default Profile;

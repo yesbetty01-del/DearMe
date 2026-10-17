@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getItems, setItems } from "../utils/storage";
+import { getItems, setItems, setManyItems } from "../utils/storage";
 
 const JOURNALS_STORAGE_KEY = "journals";
 const DELETED_JOURNALS_STORAGE_KEY = "deletedJournals";
@@ -40,8 +40,8 @@ const useJournalsStore = create((set, get) => ({
     ],
     addJournal: async (entry) => {
         const journals = [entry, ...get().journals];
+        if (!await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals))) throw new Error('Could not save your entry. Please try again.');
         set({ journals });
-        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
     },
     updateJournal: async (entryId, updates) => {
         const journals = get().journals.map((journal) => journal.id === entryId ? { ...journal, ...updates } : journal);
@@ -51,20 +51,24 @@ const useJournalsStore = create((set, get) => ({
     },
     deleteJournal: async (entryId) => {
         const nextDeletedIds = new Set(deletedJournalIds).add(entryId);
-        const savedDeletedIds = await setItems(DELETED_JOURNALS_STORAGE_KEY, JSON.stringify([...nextDeletedIds]));
-        if (!savedDeletedIds) throw new Error('Could not delete your entry. Please try again.');
-        deletedJournalIds = nextDeletedIds;
         const journals = get().journals.filter((journal) => journal.id !== entryId);
-        const saved = await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
-        if (!saved) throw new Error('Could not delete your entry. Please try again.');
+        try {
+            await setManyItems([
+                [DELETED_JOURNALS_STORAGE_KEY, JSON.stringify([...nextDeletedIds])],
+                [JOURNALS_STORAGE_KEY, JSON.stringify(journals)],
+            ]);
+        } catch {
+            throw new Error('Could not delete your entry. Please try again.');
+        }
+        deletedJournalIds = nextDeletedIds;
         set({ journals });
     },
     addReflection: async (entryId, reflection) => {
         const journals = get().journals.map((journal) => journal.id === entryId
             ? { ...journal, reflections: [...(journal.reflections || []), reflection] }
             : journal);
+        if (!await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals))) throw new Error('Could not save your reflection. Please try again.');
         set({ journals });
-        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
     },
     updateReflection: async (entryId, reflectionId, updates) => {
         const journals = get().journals.map((journal) => journal.id === entryId
@@ -84,36 +88,34 @@ const useJournalsStore = create((set, get) => ({
     },
 }))
 
-Promise.all([getItems(JOURNALS_STORAGE_KEY), getItems(DELETED_JOURNALS_STORAGE_KEY)]).then(([storedJournals, storedDeletedIds]) => {
+export const hydrateJournalStore = async () => {
+    const [storedJournals, storedDeletedIds] = await Promise.all([
+        getItems(JOURNALS_STORAGE_KEY),
+        getItems(DELETED_JOURNALS_STORAGE_KEY),
+    ]);
     try {
         const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
-        if (Array.isArray(parsedDeletedIds)) deletedJournalIds = new Set(parsedDeletedIds);
+        if (Array.isArray(parsedDeletedIds)) deletedJournalIds = new Set(parsedDeletedIds.map(String));
     } catch (error) {
         console.error("Error parsing deleted journal IDs:", error);
     }
     if (!storedJournals) {
-        if (deletedJournalIds.size) useJournalsStore.setState((state) => ({ journals: state.journals.filter((journal) => !deletedJournalIds.has(journal.id)) }));
+        const journals = useJournalsStore.getState().journals.filter((journal) => !deletedJournalIds.has(String(journal.id)));
+        useJournalsStore.setState({ journals });
+        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
         return;
     }
 
     try {
         const savedJournals = JSON.parse(storedJournals);
         const journals = Array.isArray(savedJournals)
-            ? savedJournals.filter((journal) => !deletedJournalIds.has(journal.id))
+            ? savedJournals.filter((journal) => !deletedJournalIds.has(String(journal.id)))
             : [];
-        if (Array.isArray(journals)) {
-            const currentJournals = useJournalsStore.getState().journals;
-            const storedIds = new Set(journals.map((journal) => journal.id));
-            const mergedJournals = [
-                ...currentJournals.filter((journal) => !deletedJournalIds.has(journal.id) && !storedIds.has(journal.id)),
-                ...journals,
-            ];
-            useJournalsStore.setState({ journals: mergedJournals });
-        }
+        useJournalsStore.setState({ journals });
     } catch (error) {
         console.error("Error parsing saved journals:", error);
     }
-});
+};
 
 export default function journalStore() {
     return useJournalsStore((state) => state.journals)

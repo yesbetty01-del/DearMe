@@ -1,11 +1,14 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 import { Stack } from "expo-router";
+import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import useTheme from '../store/useTheme';
-import { useLetterStore } from '../store/letterStore';
+import { hydrateLetterStore, useLetterStore } from '../store/letterStore';
+import { hydrateJournalStore } from '../store/journalStore';
+import { initializeDataLayer } from '../utils/storage';
 import {
     useFonts,
     Fraunces_300Light,
@@ -21,8 +24,25 @@ import {
 export default function Layout() {
     const { colors } = useTheme();
     const refreshArrivals = useLetterStore((state) => state.refreshArrivals);
+    const [storageReady, setStorageReady] = useState(false);
+    const [storageError, setStorageError] = useState(null);
 
     useEffect(() => {
+        let active = true;
+        initializeDataLayer()
+            .then(() => Promise.all([hydrateJournalStore(), hydrateLetterStore()]))
+            .then(() => {
+                if (active) setStorageReady(true);
+            })
+            .catch((error) => {
+                console.error('Could not initialize local data:', error);
+                if (active) setStorageError('DearMe could not open your local journal data. Please restart the app.');
+            });
+        return () => { active = false; };
+    }, []);
+
+    useEffect(() => {
+        if (!storageReady) return undefined;
         refreshArrivals();
         const interval = setInterval(refreshArrivals, 60 * 1000);
         const subscription = AppState.addEventListener('change', (state) => {
@@ -32,7 +52,7 @@ export default function Layout() {
             clearInterval(interval);
             subscription.remove();
         };
-    }, [refreshArrivals]);
+    }, [refreshArrivals, storageReady]);
 
     const [fontsLoaded] = useFonts({
         Fraunces_300Light,
@@ -43,8 +63,13 @@ export default function Layout() {
         Inter_500Medium,
     });
 
-    if (!fontsLoaded) {
+    if (!fontsLoaded || (!storageReady && !storageError)) {
         return null;
+    }
+    if (storageError) {
+        return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.background }}>
+            <Text style={{ color: colors.foreground, textAlign: 'center' }}>{storageError}</Text>
+        </View>;
     }
     return(
         <GestureHandlerRootView style={{ flex: 1 }}>

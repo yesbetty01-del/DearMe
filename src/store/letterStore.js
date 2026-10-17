@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getItems, setItems } from '../utils/storage';
+import { getItems, setItems, setManyItems } from '../utils/storage';
 
 const STORAGE_KEY = 'letters';
 const DELETED_LETTERS_STORAGE_KEY = 'deletedLetters';
@@ -90,11 +90,16 @@ export const useLetterStore = create((set, get) => ({
     },
     deleteLetter: async (letterId) => {
         const nextDeletedIds = new Set(deletedLetterIds).add(letterId);
-        const savedDeletedIds = await setItems(DELETED_LETTERS_STORAGE_KEY, JSON.stringify([...nextDeletedIds]));
-        if (!savedDeletedIds) throw new Error('Could not delete your letter. Please try again.');
-        deletedLetterIds = nextDeletedIds;
         const letters = get().letters.filter((letter) => letter.id !== letterId);
-        await persist(letters);
+        try {
+            await setManyItems([
+                [DELETED_LETTERS_STORAGE_KEY, JSON.stringify([...nextDeletedIds])],
+                [STORAGE_KEY, JSON.stringify(letters)],
+            ]);
+        } catch {
+            throw new Error('Could not delete your letter. Please try again.');
+        }
+        deletedLetterIds = nextDeletedIds;
         set({ letters });
     },
     addReply: async (letterId, reply) => {
@@ -127,30 +132,35 @@ export const useLetterStore = create((set, get) => ({
     },
 }));
 
-Promise.all([getItems(STORAGE_KEY), getItems(DELETED_LETTERS_STORAGE_KEY)]).then(async ([storedLetters, storedDeletedIds]) => {
+export const hydrateLetterStore = async () => {
+    const [storedLetters, storedDeletedIds] = await Promise.all([
+        getItems(STORAGE_KEY),
+        getItems(DELETED_LETTERS_STORAGE_KEY),
+    ]);
     try {
         const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
-        if (Array.isArray(parsedDeletedIds)) deletedLetterIds = new Set(parsedDeletedIds);
+        if (Array.isArray(parsedDeletedIds)) deletedLetterIds = new Set(parsedDeletedIds.map(String));
     } catch (error) {
         console.error('Error parsing deleted letter IDs:', error);
     }
-    if (!storedLetters) return;
+    if (!storedLetters) {
+        const letters = useLetterStore.getState().letters
+            .filter((letter) => !deletedLetterIds.has(String(letter.id)))
+            .map(withCurrentStatus);
+        useLetterStore.setState({ letters });
+        await persist(letters);
+        return;
+    }
     try {
         const saved = JSON.parse(storedLetters);
         if (!Array.isArray(saved)) return;
-        const activeSavedLetters = saved.filter((letter) => !deletedLetterIds.has(letter.id));
-        const savedIds = new Set(activeSavedLetters.map((letter) => letter.id));
-        const current = useLetterStore.getState().letters;
-        const currentOnly = current.filter((letter) => !deletedLetterIds.has(letter.id) && !savedIds.has(letter.id));
-        const knownIds = new Set([...savedIds, ...currentOnly.map((letter) => letter.id)]);
-        const letters = [...activeSavedLetters.map(withCurrentStatus), ...currentOnly.map(withCurrentStatus), ...seedLetters
-            .filter((letter) => !deletedLetterIds.has(letter.id) && !knownIds.has(letter.id))
-            .map(withCurrentStatus)];
+        const activeSavedLetters = saved.filter((letter) => !deletedLetterIds.has(String(letter.id)));
+        const letters = activeSavedLetters.map(withCurrentStatus);
         useLetterStore.setState({ letters });
         await persist(letters);
     } catch (error) {
         console.error('Error parsing saved letters:', error);
     }
-});
+};
 
 export const useLetters = () => useLetterStore((state) => state.letters);
