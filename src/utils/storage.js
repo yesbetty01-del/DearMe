@@ -4,7 +4,7 @@ import * as SQLite from 'expo-sqlite';
 const DATABASE_NAME = 'dearme.db';
 const MIGRATION_KEY = 'migration:async-storage:v1';
 const LEGACY_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters', 'onboardingCompleted'];
-const BACKUP_MANAGED_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters'];
+const BACKUP_MANAGED_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters', 'deletedReflections', 'deletedReplies'];
 
 let databasePromise;
 

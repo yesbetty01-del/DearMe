@@ -1,5 +1,5 @@
-import React from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import useTheme from '../../store/useTheme';
@@ -8,8 +8,12 @@ import EntryHeader from '../../components/write/entryHeader';
 import InputText from '../../components/write/inputText';
 import Toolbar from '../../components/write/toolbar';
 import useWritingContent from '../../hook/useWritingContent';
+import {
+    prepareContentBlocksForSave,
+} from '../../utils/attachmentStorage';
 
 const Reflection = () => {
+    const draftId = useRef(`${Date.now()}`);
     const { colors, spacing, fSize } = useTheme();
     const { entryId, reflectionId } = useLocalSearchParams();
     const entries = journalStore();
@@ -28,20 +32,31 @@ const Reflection = () => {
 
     const saveReflection = async () => {
         if (!writing.hasWritingContent) return;
-        const updatedReflection = {
-            ...(reflection || {}),
-            id: reflection?.id || `${Date.now()}`,
-            content: writing.content,
-            contentBlocks: writing.contentBlocks,
-            attachments: writing.attachments,
-            writtenDate: reflection?.writtenDate || new Date().toISOString(),
-        };
-        if (reflection) {
-            await updateReflection(entry.id, reflection.id, updatedReflection);
-            router.replace({ pathname: '/reflection/[id]', params: { id: reflection.id, entryId: entry.id } });
-        } else {
-            await addReflection(entry.id, updatedReflection);
-            router.replace('/(tabs)/journal');
+        try {
+            const reflectionIdToSave = reflection?.id || draftId.current;
+            const preparedContent = await prepareContentBlocksForSave({
+                blocks: writing.contentBlocks,
+            });
+            const updatedReflection = {
+                ...(reflection || {}),
+                id: reflectionIdToSave,
+                content: writing.content,
+                contentBlocks: preparedContent.contentBlocks,
+                attachments: preparedContent.attachments,
+                writtenDate: reflection?.writtenDate || new Date().toISOString(),
+            };
+            if (reflection) {
+                await updateReflection(entry.id, reflection.id, updatedReflection);
+            } else {
+                await addReflection(entry.id, updatedReflection);
+            }
+            if (reflection) {
+                router.replace({ pathname: '/reflection/[id]', params: { id: reflection.id, entryId: entry.id } });
+            } else {
+                router.replace('/(tabs)/journal');
+            }
+        } catch (error) {
+            Alert.alert('Could not save reflection', error?.message || 'Please try again.');
         }
     };
 

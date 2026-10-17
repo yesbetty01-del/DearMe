@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Modal, Pressable, Text, View } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import ConfirmationDialog from './confirmationDialog';
+import useAttachmentUri from '../hook/useAttachmentUri';
 
 const EntryAttachments = ({ attachments = [], onAttachmentReviewed, onRemoveAttachment }) => {
     const { colors, fSize, spacing } = useTheme();
@@ -14,33 +15,14 @@ const EntryAttachments = ({ attachments = [], onAttachmentReviewed, onRemoveAtta
     return (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingVertical: spacing.xs }}>
             {attachments.map((attachment, index) => (
-                <View key={attachment.id || `${attachment.uri}-${index}`} style={{ position: 'relative' }}>
-                    {attachment.type === 'image' ? (
-                        <Pressable
-                            onPress={() => setSelectedImage(attachment.uri)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Open ${attachment.name || 'attached image'}`}
-                        >
-                            <Image
-                                source={{ uri: attachment.uri }}
-                                accessibilityLabel={attachment.name || 'Attached image'}
-                                style={{ width: 96, height: 96, borderRadius: 8, backgroundColor: colors.surface }}
-                            />
-                        </Pressable>
-                    ) : (
-                        <VoiceAttachment attachment={attachment} onReviewed={onAttachmentReviewed} />
-                    )}
-                    {!!onRemoveAttachment && (
-                        <Pressable
-                            onPress={() => setAttachmentToRemove(attachment)}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Remove ${attachment.name || 'attachment'}`}
-                            style={{ position: 'absolute', top: 2, right: 2, width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: colors.background }}
-                        >
-                            <Icon name="x" color={colors.foreground} size={14} />
-                        </Pressable>
-                    )}
-                </View>
+                <AttachmentItem
+                    key={attachment.id || attachment.storageId || `${attachment.uri}-${index}`}
+                    attachment={attachment}
+                    colors={colors}
+                    onOpenImage={setSelectedImage}
+                    onRemove={onRemoveAttachment ? setAttachmentToRemove : null}
+                    onReviewed={onAttachmentReviewed}
+                />
             ))}
             <Modal visible={Boolean(selectedImage)} transparent animationType="fade" onRequestClose={() => setSelectedImage(null)}>
                 <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.96)' }}>
@@ -64,10 +46,54 @@ const EntryAttachments = ({ attachments = [], onAttachmentReviewed, onRemoveAtta
                 confirmColor={colors.destructive}
                 onCancel={() => setAttachmentToRemove(null)}
                 onConfirm={() => {
-                    if (attachmentToRemove) onRemoveAttachment?.(attachmentToRemove.uri);
+                    if (attachmentToRemove) onRemoveAttachment?.(attachmentToRemove.id || attachmentToRemove.uri || attachmentToRemove.storageId);
                     setAttachmentToRemove(null);
                 }}
             />
+        </View>
+    );
+};
+
+const AttachmentItem = ({ attachment, colors, onOpenImage, onRemove, onReviewed }) => {
+    const uri = useAttachmentUri(attachment);
+    const attachmentLabel = attachment.name || (attachment.type === 'audio' ? 'voice note' : 'attached image');
+
+    return (
+        <View style={{ position: 'relative' }}>
+            {attachment.type === 'image' ? (
+                <Pressable
+                    onPress={() => uri && onOpenImage(uri)}
+                    disabled={!uri}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open ${attachmentLabel}`}
+                >
+                    {uri && (
+                        <Image
+                            source={{ uri }}
+                            accessibilityLabel={attachmentLabel}
+                            style={{ width: 96, height: 96, borderRadius: 8, backgroundColor: colors.surface }}
+                        />
+                    )}
+                    {!uri && <View style={{ width: 96, height: 96, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: colors.surface }}><ActivityIndicator color={colors.primary} /></View>}
+                </Pressable>
+            ) : uri ? (
+                <VoiceAttachment attachment={{ ...attachment, uri }} onReviewed={onReviewed} />
+            ) : (
+                <View style={{ minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, borderRadius: 19, backgroundColor: colors.surfaceAlt }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={{ color: colors.mutedForeground }}>Loading voice note</Text>
+                </View>
+            )}
+            {!!onRemove && (
+                <Pressable
+                    onPress={() => onRemove(attachment)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${attachmentLabel}`}
+                    style={{ position: 'absolute', top: 2, right: 2, width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: colors.background }}
+                >
+                    <Icon name="x" color={colors.foreground} size={14} />
+                </Pressable>
+            )}
         </View>
     );
 };
@@ -78,8 +104,8 @@ const VoiceAttachment = ({ attachment, onReviewed }) => {
     const status = useAudioPlayerStatus(player);
 
     useEffect(() => {
-        if (status.didJustFinish && !attachment.reviewed) onReviewed?.(attachment.uri);
-    }, [status.didJustFinish, attachment.uri, attachment.reviewed, onReviewed]);
+        if (status.didJustFinish && !attachment.reviewed) onReviewed?.(attachment.id || attachment.storageId || attachment.uri);
+    }, [status.didJustFinish, attachment.id, attachment.storageId, attachment.uri, attachment.reviewed, onReviewed]);
 
     const togglePlayback = async () => {
         try {

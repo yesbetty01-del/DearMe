@@ -4,6 +4,7 @@ import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { router } from 'expo-router'
 import HighlightedText from './highlightedText';
+import useAttachmentUri from '../hook/useAttachmentUri';
 
 const getSearchSnippet = (content, query) => {
     const term = query?.trim();
@@ -58,9 +59,12 @@ const JournalEntryCard = ({ journal, grouped = false, searchQuery = '' }) => {
     }
     const date = new Date(journal.date);
     const moodColor = colors[journal.moodColor] || colors.primary;
-    const attachmentImage = journal.attachments?.find((attachment) => attachment.type === 'image')?.uri;
+    const imageAttachment = journal.attachments?.find((attachment) => attachment.type === 'image')
+        || journal.contentBlocks?.find((block) => block.type === 'image');
+    const attachmentImage = useAttachmentUri(imageAttachment);
     const hasImage = Boolean(attachmentImage || journal.image);
-    const hasVoiceNote = journal.attachments?.some((attachment) => attachment.type === 'audio');
+    const hasVoiceNote = journal.attachments?.some((attachment) => attachment.type === 'audio')
+        || journal.contentBlocks?.some((block) => block.type === 'audio');
     return (
         <View style={{paddingVertical: spacing.sm}}>
             <Pressable

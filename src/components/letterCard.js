@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { getDeliveryDateKey } from '../store/letterStore';
+import { parseCalendarDate } from '../utils/date';
 
 const LetterCard = ({ letter }) => {
     const { colors, fSize, spacing } = useTheme();
@@ -17,6 +18,11 @@ const LetterCard = ({ letter }) => {
             year: 'numeric',
         })
         : deliveryDate;
+    const formattedWrittenDate = parseCalendarDate(writtenDate)?.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }) || '';
     const styles = createStyles(colors, fSize, spacing);
 
     return (
@@ -45,7 +51,7 @@ const LetterCard = ({ letter }) => {
             </View>
 
             <View>
-                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.title}>{status === 'scheduled' ? 'Sealed letter' : title}</Text>
                 {status === 'delivered' && (
                     <Text numberOfLines={2} style={styles.content}>
                         {content}
@@ -63,7 +69,7 @@ const LetterCard = ({ letter }) => {
                 <View style={styles.detailDivider} />
                 <View style={styles.detailCell}>
                     <Text style={styles.detailLabel}>WRITTEN</Text>
-                    <Text style={styles.detailValue}>{writtenDate}</Text>
+                    <Text style={styles.detailValue}>{formattedWrittenDate}</Text>
                 </View>
             </View>
 

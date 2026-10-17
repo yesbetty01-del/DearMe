@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { getDeliveryDateKey } from '../store/letterStore';
+import { getDeviceTimeZone, getLetterReleaseAt } from '../utils/letterSchedule';
 
 const parseDate = (value) => {
     const date = new Date(value);
@@ -12,19 +13,29 @@ const parseDate = (value) => {
 
 const LockedLetterCard = ({ letter }) => {
     const { colors, spacing } = useTheme();
-    const now = new Date();
+    const [now, setNow] = useState(Date.now());
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30 * 1000);
+        return () => clearInterval(interval);
+    }, []);
     const deliveryDateKey = getDeliveryDateKey(letter.deliveryDate);
-    const arrives = deliveryDateKey
-        ? new Date(`${deliveryDateKey}T00:00:00`)
+    const releaseAt = letter.releaseAt ?? getLetterReleaseAt(
+        deliveryDateKey,
+        letter.deliveryTime,
+        letter.deliveryTimezone || getDeviceTimeZone(),
+    );
+    const arrives = releaseAt !== null
+        ? new Date(releaseAt)
         : parseDate(letter.deliveryDate);
+    const releaseTimestamp = releaseAt ?? arrives?.getTime();
     const sealed = parseDate(letter.writtenDate);
-    const daysLeft = arrives
-        ? Math.max(0, Math.ceil((new Date(arrives.toDateString()) - new Date(now.toDateString())) / 86400000))
+    const daysLeft = releaseTimestamp !== undefined
+        ? Math.max(0, Math.ceil((releaseTimestamp - now) / 86400000))
         : 0;
     const totalDays = arrives && sealed
         ? Math.max(1, Math.ceil((arrives - sealed) / 86400000))
         : 1;
-    const elapsedDays = sealed ? Math.max(0, Math.ceil((now - sealed) / 86400000)) : 0;
+    const elapsedDays = sealed ? Math.max(0, Math.ceil((now - sealed.getTime()) / 86400000)) : 0;
     const progress = Math.min(1, elapsedDays / totalDays);
     const styles = createStyles(colors, spacing);
 
@@ -37,7 +48,7 @@ const LockedLetterCard = ({ letter }) => {
                 </View>
             </View>
             <View>
-                <Text style={styles.title}>{letter.title}</Text>
+                <Text style={styles.title}>Sealed letter</Text>
                 <View style={styles.stats}>
                     <View style={styles.statCell}>
                         <Text style={styles.statLabel}>OPENS IN</Text>
@@ -57,6 +68,7 @@ const LockedLetterCard = ({ letter }) => {
                                     month: 'short',
                                     day: 'numeric',
                                     year: 'numeric',
+                                    timeZone: letter.deliveryTimezone || getDeviceTimeZone(),
                                 })
                                 : letter.deliveryDate}
                         </Text>

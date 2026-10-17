@@ -5,12 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import useTheme from '../../store/useTheme';
 import Header from '../../components/header';
 import Chip from '../../components/chip';
-import { useLetters } from '../../store/letterStore';
+import { useLetters, useLetterStore } from '../../store/letterStore';
 import LetterCard from '../../components/letterCard';
 import LetterReplyCard from '../../components/letterReplyCard';
 import Icon from '../../components/icon';
 import { parseCalendarDate } from '../../utils/date';
 import { getItems } from '../../utils/storage';
+import LoadingScreen from '../../components/loadingScreen';
 
 const getWrittenDate = (item) => {
     if (item.type === 'reply') {
@@ -45,21 +46,26 @@ const Letters = () => {
     const [selectedChip, setSelectedChip] = useState('All');
     const [hideLockedLetters, setHideLockedLetters] = useState(true);
     const letters = useLetters();
+    const lettersReady = useLetterStore((state) => state.isReady);
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     useFocusEffect(useCallback(() => {
         let isActive = true;
-        getItems('profileSettings').then((savedSettings) => {
-            if (!isActive) return;
-            try {
-                setHideLockedLetters(savedSettings ? JSON.parse(savedSettings).hideLockedLetters === true : false);
-            } catch (error) {
-                console.error('Could not load profile settings:', error);
-                setHideLockedLetters(false);
-            }
-        });
+        setSettingsLoaded(false);
+        getItems('profileSettings')
+            .then((savedSettings) => {
+                if (!isActive) return;
+                try {
+                    setHideLockedLetters(savedSettings ? JSON.parse(savedSettings).hideLockedLetters === true : false);
+                } catch (error) {
+                    console.error('Could not load profile settings:', error);
+                    setHideLockedLetters(false);
+                }
+            })
+            .catch((error) => console.error('Could not load profile settings:', error))
+            .finally(() => { if (isActive) setSettingsLoaded(true); });
         return () => { isActive = false; };
     }, []));
-
     const visibleLetters = useMemo(
         () => hideLockedLetters ? letters.filter((letter) => letter.status !== 'scheduled') : letters,
         [hideLockedLetters, letters],
@@ -149,6 +155,8 @@ const Letters = () => {
             message: 'Replies to your letters will appear here.',
         },
     }[selectedChip];
+
+    if (!lettersReady || !settingsLoaded) return <LoadingScreen />;
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

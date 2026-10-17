@@ -13,6 +13,8 @@ import ConfirmationDialog from '../../components/confirmationDialog';
 import OptionCard from '../../components/optionCard';
 import { createBackupFile, inspectBackupFile, restoreBackupFile } from '../../utils/backup';
 import { getItems, setItems } from '../../utils/storage';
+import LoadingScreen from '../../components/loadingScreen';
+import { useAuth, useClerk, useUser } from '@clerk/expo';
 
 const PROFILE_SETTINGS_KEY = 'profileSettings';
 const DEFAULT_SETTINGS = {
@@ -27,20 +29,23 @@ const Profile = () => {
     const journals = journalStore();
     const letters = useLetters();
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-    const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [busyAction, setBusyAction] = useState(null);
     const busy = busyAction !== null;
     const styles = createStyles(colors, spacing);
 
     useEffect(() => {
-        getItems(PROFILE_SETTINGS_KEY).then((savedSettings) => {
-            if (!savedSettings) return;
-            try {
-                setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
-            } catch (error) {
-                console.error('Could not load profile settings:', error);
-            }
-        });
+        getItems(PROFILE_SETTINGS_KEY)
+            .then((savedSettings) => {
+                if (!savedSettings) return;
+                try {
+                    setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+                } catch (error) {
+                    console.error('Could not load profile settings:', error);
+                }
+            })
+            .catch((error) => console.error('Could not load profile settings:', error))
+            .finally(() => setSettingsLoaded(true));
     }, []);
 
     const updateSetting = (key, value) => {
@@ -56,12 +61,6 @@ const Profile = () => {
         })),
         { text: 'Cancel', style: 'cancel' },
     ]);
-
-    const signOut = async () => {
-        await setItems('onboardingCompleted', 'false');
-        setShowSignOutDialog(false);
-        router.replace('/onboarding');
-    };
 
     const exportBackup = async () => {
         if (busy) return;
@@ -170,6 +169,8 @@ const Profile = () => {
     const openedCount = letters.filter((letter) => letter.status === 'delivered').length;
     const totalMoodEntries = moodCounts.reduce((total, mood) => total + mood.count, 0);
 
+    if (!settingsLoaded) return <LoadingScreen />;
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -185,15 +186,13 @@ const Profile = () => {
                     </Pressable>
                 </View>
 
-                <View style={styles.profileEmptyState}>
-                    <View style={styles.profileEmptyIcon}>
-                        <Icon name="user" color={colors.mutedForeground} size={20} />
-                    </View>
-                    <Text style={styles.profileEmptyTitle}>Your profile</Text>
-                    <Text style={styles.profileEmptyText}>
-                        Sign in or create an account to add your name and photo here.
-                    </Text>
-                </View>
+                {process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
+                    ? <AccountPanel colors={colors} spacing={spacing} styles={styles} />
+                    : <View style={styles.profileEmptyState}>
+                        <View style={styles.profileEmptyIcon}><Icon name="user" color={colors.mutedForeground} size={20} /></View>
+                        <Text style={styles.profileEmptyTitle}>Your profile</Text>
+                        <Text style={styles.profileEmptyText}>Your writing is saved on this device. Add a Clerk publishable key to enable account syncing.</Text>
+                    </View>}
 
                 <View style={styles.pagesCard}>
                     <Text style={styles.cardTitle}>Your pages</Text>
@@ -295,22 +294,56 @@ const Profile = () => {
                     </View>
                 </SettingsSection>
 
-                <Pressable onPress={() => setShowSignOutDialog(true)} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
-                    <Icon name="log-out" color={colors.destructive} size={16} />
-                    <Text style={styles.signOutText}>Sign out</Text>
-                </Pressable>
             </ScrollView>
+        </SafeAreaView>
+    );
+};
+
+const AccountPanel = ({ colors, spacing, styles }) => {
+    const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
+    const { user } = useUser();
+    const { signOut } = useClerk();
+    const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+    if (!isLoaded) return <LoadingScreen />;
+    if (!isSignedIn) {
+        return (
+            <View style={styles.profileEmptyState}>
+                <View style={styles.profileEmptyIcon}><Icon name="user" color={colors.mutedForeground} size={20} /></View>
+                <Text style={styles.profileEmptyTitle}>Your profile</Text>
+                <Text style={styles.profileEmptyText}>Create an account to sync your writing and access it on your other devices.</Text>
+                <Pressable onPress={() => router.push('/account')} style={{ marginTop: spacing.md, padding: spacing.sm }}>
+                    <Text style={{ color: colors.primary, fontFamily: 'Inter_500Medium' }}>Sign in or create an account</Text>
+                </Pressable>
+            </View>
+        );
+    }
+
+    return (
+        <>
+            <View style={styles.profileEmptyState}>
+                <View style={styles.profileEmptyIcon}><Icon name="user" color={colors.primary} size={20} /></View>
+                <Text style={styles.profileEmptyTitle}>{user?.fullName || 'Your account'}</Text>
+                <Text style={styles.profileEmptyText}>{user?.primaryEmailAddress?.emailAddress || 'Your account is connected.'}</Text>
+            </View>
+            <Pressable onPress={() => setShowSignOutDialog(true)} style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}>
+                <Icon name="log-out" color={colors.destructive} size={16} />
+                <Text style={styles.signOutText}>Sign out</Text>
+            </Pressable>
             <ConfirmationDialog
                 visible={showSignOutDialog}
                 title="Sign out of DearMe?"
-                message="You’ll return to the welcome screens. Your journal entries and letters will stay on this device."
+                message="Your journal entries and letters will stay on this device."
                 confirmLabel="Sign out"
                 icon="log-out"
                 confirmColor={colors.destructive}
                 onCancel={() => setShowSignOutDialog(false)}
-                onConfirm={signOut}
+                onConfirm={async () => {
+                    await signOut();
+                    setShowSignOutDialog(false);
+                }}
             />
-        </SafeAreaView>
+        </>
     );
 };
 

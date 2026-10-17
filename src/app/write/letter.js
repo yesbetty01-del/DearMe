@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -12,9 +12,14 @@ import DatePicker from '../../components/write/datePicker';
 import ScheduleConfirmation from '../../components/write/scheduleConfirmation';
 import LetterSealAnimation from '../../components/write/letterSealAnimation';
 import { useLetterStore, toLocalDateKey } from '../../store/letterStore';
+import { getDeviceTimeZone } from '../../utils/letterSchedule';
 import useWritingContent from '../../hook/useWritingContent';
+import {
+    prepareContentBlocksForSave,
+} from '../../utils/attachmentStorage';
 
 const Letter = () => {
+    const draftId = useRef(`${Date.now()}`);
     const { colors } = useTheme();
     const { editId } = useLocalSearchParams();
     const letters = useLetterStore((state) => state.letters);
@@ -71,17 +76,22 @@ const Letter = () => {
             Calm: ['smile', 'moodCalm'], Warm: ['sun', 'moodWarm'], Cloudy: ['cloud', 'moodCloud'],
             Quiet: ['moon', 'moodQuiet'], Alive: ['flame', 'moodAlive'],
         };
+        const letterId = existingLetter?.id || draftId.current;
+        const preparedContent = await prepareContentBlocksForSave({
+            blocks: writing.contentBlocks,
+        });
         const updatedLetter = {
             ...(existingLetter || {}),
-            id: existingLetter?.id || `${Date.now()}`,
+            id: letterId,
             title: title.trim() || 'To my future self',
             content: writing.content,
-            contentBlocks: writing.contentBlocks,
-            attachments: writing.attachments,
+            contentBlocks: preparedContent.contentBlocks,
+            attachments: preparedContent.attachments,
             ...(mood ? { mood: moodDetails[mood][0], moodName: moodNames[mood], moodColor: moodDetails[mood][1] } : {}),
             writtenDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             deliveryDate,
             deliveryTime: arrivalDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            deliveryTimezone: existingLetter?.deliveryTimezone || getDeviceTimeZone(),
             status: 'scheduled',
             replies: [],
         };

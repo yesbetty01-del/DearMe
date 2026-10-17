@@ -11,10 +11,11 @@ import LockedLetterCard from '../../components/lockedLetterCard';
 import FeaturedReflectionCard from '../../components/home/featuredReflectionCard';
 import WeekMoodTracker from '../../components/home/weekMoodTracker';
 import EarlierEntriesList from '../../components/home/earlierEntriesList';
-import { useLetters, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
+import { useLetters, useLetterStore, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
 import { getItems } from '../../utils/storage';
+import LoadingScreen from '../../components/loadingScreen';
 
 const parseDate = (value) => {
     const date = new Date(value);
@@ -25,18 +26,24 @@ const Home = () => {
     const { colors, spacing } = useTheme();
     const journals = journalStore();
     const letterStore = useLetters();
+    const lettersReady = useLetterStore((state) => state.isReady);
     const [hideLockedLetters, setHideLockedLetters] = useState(true);
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
     useFocusEffect(useCallback(() => {
         let isActive = true;
-        getItems('profileSettings').then((savedSettings) => {
-            if (!isActive) return;
-            try {
-                setHideLockedLetters(savedSettings ? JSON.parse(savedSettings).hideLockedLetters === true : false);
-            } catch (error) {
-                console.error('Could not load profile settings:', error);
-                setHideLockedLetters(false);
-            }
-        });
+        setSettingsLoaded(false);
+        getItems('profileSettings')
+            .then((savedSettings) => {
+                if (!isActive) return;
+                try {
+                    setHideLockedLetters(savedSettings ? JSON.parse(savedSettings).hideLockedLetters === true : false);
+                } catch (error) {
+                    console.error('Could not load profile settings:', error);
+                    setHideLockedLetters(false);
+                }
+            })
+            .catch((error) => console.error('Could not load profile settings:', error))
+            .finally(() => { if (isActive) setSettingsLoaded(true); });
         return () => { isActive = false; };
     }, []));
     const today = toLocalDateKey(new Date());
@@ -48,6 +55,8 @@ const Home = () => {
         .filter((letter) => letter.status === 'scheduled')
         .sort((a, b) => (parseDate(a.deliveryDate)?.getTime() ?? Infinity) - (parseDate(b.deliveryDate)?.getTime() ?? Infinity))[0], [hideLockedLetters, letterStore]);
     const arrivedToday = letterStore.filter((letter) => letter.status === 'delivered' && getDeliveryDateKey(letter.deliveryDate) === today);
+
+    if (!lettersReady || !settingsLoaded) return <LoadingScreen />;
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>

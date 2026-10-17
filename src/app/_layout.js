@@ -5,10 +5,17 @@ import { Stack } from "expo-router";
 import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
+import { useAuth } from '@clerk/expo';
 import useTheme from '../store/useTheme';
 import { hydrateLetterStore, useLetterStore } from '../store/letterStore';
-import { hydrateJournalStore } from '../store/journalStore';
+import { hydrateJournalStore, useJournalsReady } from '../store/journalStore';
 import { initializeDataLayer } from '../utils/storage';
+import LoadingScreen from '../components/loadingScreen';
+import { setConvexTokenProvider } from '../utils/convexAuth';
+import { requestSync, setSyncHandler } from '../utils/syncQueue';
+import { syncLocalData } from '../utils/convexRecords';
 import {
     useFonts,
     Fraunces_300Light,
@@ -21,9 +28,22 @@ import {
     Inter_500Medium,
 } from '@expo-google-fonts/inter';
 
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
 export default function Layout() {
+    if (!clerkPublishableKey) return <AppLayout />;
+    return (
+        <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+            <AppLayout />
+        </ClerkProvider>
+    );
+}
+
+function AppLayout() {
     const { colors } = useTheme();
     const refreshArrivals = useLetterStore((state) => state.refreshArrivals);
+    const lettersReady = useLetterStore((state) => state.isReady);
+    const journalsReady = useJournalsReady();
     const [storageReady, setStorageReady] = useState(false);
     const [storageError, setStorageError] = useState(null);
 
@@ -42,7 +62,7 @@ export default function Layout() {
     }, []);
 
     useEffect(() => {
-        if (!storageReady) return undefined;
+        if (!storageReady || !lettersReady || !journalsReady) return undefined;
         refreshArrivals();
         const interval = setInterval(refreshArrivals, 60 * 1000);
         const subscription = AppState.addEventListener('change', (state) => {
@@ -52,7 +72,7 @@ export default function Layout() {
             clearInterval(interval);
             subscription.remove();
         };
-    }, [refreshArrivals, storageReady]);
+    }, [lettersReady, journalsReady, refreshArrivals, storageReady]);
 
     const [fontsLoaded] = useFonts({
         Fraunces_300Light,
@@ -64,13 +84,14 @@ export default function Layout() {
     });
 
     if (!fontsLoaded || (!storageReady && !storageError)) {
-        return null;
+        return <LoadingScreen />;
     }
     if (storageError) {
         return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.background }}>
             <Text style={{ color: colors.foreground, textAlign: 'center' }}>{storageError}</Text>
         </View>;
     }
+    if (!lettersReady || !journalsReady) return <LoadingScreen />;
     return(
         <GestureHandlerRootView style={{ flex: 1 }}>
             <BottomSheetModalProvider>
@@ -79,7 +100,33 @@ export default function Layout() {
                     <Stack.Screen name='onboarding'/>
                     <Stack.Screen name='(tabs)'/>
                 </Stack>
+                {clerkPublishableKey ? <AuthSyncBridge /> : null}
             </BottomSheetModalProvider>
         </GestureHandlerRootView>
     )
+}
+
+function AuthSyncBridge() {
+    const { isLoaded, isSignedIn, userId, getToken } = useAuth({ treatPendingAsSignedOut: false });
+
+    useEffect(() => {
+        if (!isLoaded || !isSignedIn || !userId) {
+            setConvexTokenProvider(null);
+            setSyncHandler(null);
+            return undefined;
+        }
+
+        setConvexTokenProvider(getToken);
+        setSyncHandler(() => syncLocalData(userId));
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') requestSync();
+        });
+        return () => {
+            subscription.remove();
+            setConvexTokenProvider(null);
+            setSyncHandler(null);
+        };
+    }, [getToken, isLoaded, isSignedIn, userId]);
+
+    return null;
 }

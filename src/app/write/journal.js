@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Alert, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,9 @@ import MoodSelector from '../../components/write/moodSelector';
 import InputText from '../../components/write/inputText';
 import Toolbar from '../../components/write/toolbar';
 import useWritingContent from '../../hook/useWritingContent';
+import {
+    prepareContentBlocksForSave,
+} from '../../utils/attachmentStorage';
 
 const MOOD_DETAILS = {
     Calm: { mood: 'smile', moodColor: 'moodCalm' },
@@ -20,6 +23,7 @@ const MOOD_DETAILS = {
 
 const Journal = () => {
     const { colors } = useTheme();
+    const draftId = useRef(`${Date.now()}`);
     const { editId, mood: initialMood } = useLocalSearchParams();
     const journals = journalStore();
     const existingEntry = journals.find((entry) => entry.id === editId);
@@ -45,21 +49,25 @@ const Journal = () => {
 
     const handleSave = async () => {
         if (!writing.hasWritingContent) return;
-        const moodDetails = MOOD_DETAILS[draft.mood];
-        const entry = {
-            ...(existingEntry || {}),
-            id: existingEntry?.id || `${Date.now()}`,
-            title: draft.title.trim(),
-            date: existingEntry?.date || new Date().toISOString(),
-            mood: moodDetails?.mood,
-            moodName: draft.mood?.toUpperCase(),
-            moodColor: moodDetails?.moodColor,
-            content: writing.content,
-            contentBlocks: writing.contentBlocks,
-            attachments: writing.attachments,
-        };
-
         try {
+            const moodDetails = MOOD_DETAILS[draft.mood];
+            const entryId = existingEntry?.id || draftId.current;
+            const preparedContent = await prepareContentBlocksForSave({
+                blocks: writing.contentBlocks,
+            });
+            const entry = {
+                ...(existingEntry || {}),
+                id: entryId,
+                title: draft.title.trim(),
+                date: existingEntry?.date || new Date().toISOString(),
+                mood: moodDetails?.mood,
+                moodName: draft.mood?.toUpperCase(),
+                moodColor: moodDetails?.moodColor,
+                content: writing.content,
+                contentBlocks: preparedContent.contentBlocks,
+                attachments: preparedContent.attachments,
+            };
+
             if (existingEntry) await updateJournal(existingEntry.id, entry);
             else await addJournal(entry);
             router.back();

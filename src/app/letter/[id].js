@@ -65,7 +65,7 @@ const Id = () => {
                 {!available ? (
                     <View style={{ flex: 1, alignItems: 'center', paddingTop: spacing.xxxl }}>
                         <View style={[styles.pill, { marginBottom: spacing.lg }]}><Icon name="lock" color={colors.primary} size={24} /></View>
-                        <Text style={styles.title}>{letter.title}</Text>
+                        <Text style={styles.title}>Sealed letter</Text>
                         <Text style={styles.date}>SEALED UNTIL</Text>
                         <Text style={[styles.title, { fontSize: fSize.body, marginTop: spacing.sm }]}>
                             {new Date(`${getDeliveryDateKey(letter.deliveryDate)}T00:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}

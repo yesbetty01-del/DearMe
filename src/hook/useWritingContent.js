@@ -36,12 +36,22 @@ const useWritingContent = (initialBlocks) => {
         });
     }, []);
 
-    const removeAttachment = useCallback((uri) => {
-        setBlocks((current) => current.filter((block) => block.type === 'text' || block.uri !== uri));
+    const removeAttachment = useCallback((attachmentId) => {
+        setBlocks((current) => current.filter((block) => block.type === 'text' || (
+            block.id !== attachmentId && block.uri !== attachmentId && block.storageId !== attachmentId
+        )));
     }, []);
 
-    const markAttachmentReviewed = useCallback((uri) => {
-        setBlocks((current) => current.map((block) => block.type === 'audio' && block.uri === uri ? { ...block, reviewed: true } : block));
+    const markAttachmentReviewed = useCallback((attachmentId) => {
+        setBlocks((current) => current.map((block) => block.type === 'audio' && (
+            block.id === attachmentId || block.uri === attachmentId || block.storageId === attachmentId
+        ) ? { ...block, reviewed: true } : block));
+    }, []);
+
+    const setAttachmentStorageId = useCallback((attachmentId, storageId) => {
+        setBlocks((current) => current.map((block) => block.id === attachmentId
+            ? { ...block, storageId }
+            : block));
     }, []);
 
     return {
@@ -54,6 +64,7 @@ const useWritingContent = (initialBlocks) => {
         addAttachments,
         removeAttachment,
         markAttachmentReviewed,
+        setAttachmentStorageId,
     };
 };
 

@@ -21,7 +21,7 @@ const InputText = ({ placeholderText, fixedTitle, title, onChangeTitle, blocks =
             <View style={{ flexGrow: 1 }}>
                 {blocks.map((block, index) => {
                     if (block.type !== 'text') {
-                        return <EntryAttachments key={block.id || block.uri} attachments={[block]} onAttachmentReviewed={onAttachmentReviewed} onRemoveAttachment={onRemoveAttachment} />;
+                        return <EntryAttachments key={block.id || block.storageId || block.uri} attachments={[block]} onAttachmentReviewed={onAttachmentReviewed} onRemoveAttachment={onRemoveAttachment} />;
                     }
 
                     const isLastTextBlock = !blocks.slice(index + 1).some((nextBlock) => nextBlock.type === 'text');

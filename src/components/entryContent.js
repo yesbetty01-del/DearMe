@@ -20,7 +20,7 @@ const EntryContent = ({ content, contentBlocks, attachments = [], textStyle }) =
                 {contentBlocks.map((block) => block.type === 'text' ? (
                     block.value ? <Text key={block.id} style={textStyles}>{block.value}</Text> : null
                 ) : (
-                    <EntryAttachments key={block.id || block.uri} attachments={[block]} />
+                    <EntryAttachments key={block.id || block.storageId || block.uri} attachments={[block]} />
                 ))}
             </View>
         );

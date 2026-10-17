@@ -4,11 +4,12 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { hydrateJournalStore } from '../store/journalStore';
 import { hydrateLetterStore } from '../store/letterStore';
 import { getItems, replaceLocalData } from './storage';
+import { requestSync } from './syncQueue';
 
 const BACKUP_VERSION = 1;
 const BACKUP_FILE_TYPE = 'dearme-backup';
 const ATTACHMENT_URI_PREFIX = 'dearme-backup://attachments/';
-const DATA_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters'];
+const DATA_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters', 'deletedReflections', 'deletedReplies'];
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 const bytesToBase64 = (bytes) => {
@@ -119,12 +120,17 @@ const validateRecords = (records, label, childKey, childLabel) => {
 };
 
 const validateBackupData = (data) => {
-    if (!data || DATA_KEYS.some((key) => !Array.isArray(data[key]))) {
+    const requiredKeys = ['journals', 'deletedJournals', 'letters', 'deletedLetters'];
+    if (!data || requiredKeys.some((key) => !Array.isArray(data[key]))) {
         throw new Error('The backup does not contain valid DearMe writing.');
+    }
+    for (const key of ['deletedReflections', 'deletedReplies']) {
+        if (data[key] === undefined) data[key] = [];
+        if (!Array.isArray(data[key])) throw new Error(`The backup contains invalid ${key} data.`);
     }
     validateRecords(data.journals, 'journal', 'reflections', 'reflection');
     validateRecords(data.letters, 'letter', 'replies', 'reply');
-    for (const key of ['deletedJournals', 'deletedLetters']) {
+    for (const key of ['deletedJournals', 'deletedLetters', 'deletedReflections', 'deletedReplies']) {
         if (!data[key].every((id) => typeof id === 'string' || typeof id === 'number')) {
             throw new Error(`The backup contains invalid ${key} data.`);
         }
@@ -294,6 +300,7 @@ export const restoreBackupFile = async (file) => {
             hydrateJournalStore(),
             hydrateLetterStore(),
         ]);
+        requestSync();
     } catch (error) {
         throw new Error(`Writing was restored, but the app could not refresh its data. Restart DearMe to load it. ${error?.message || ''}`.trim());
     }

@@ -4,10 +4,16 @@ import { router } from 'expo-router';
 import useTheme from '../store/useTheme';
 import Icon from './icon';
 import { getDeliveryDateKey, toLocalDateKey } from '../store/letterStore';
+import { parseCalendarDate } from '../utils/date';
 
 const ArrivedLetterCard = ({ letter }) => {
     const { colors, fSize, spacing } = useTheme();
     const deliveredToday = getDeliveryDateKey(letter?.deliveryDate) === toLocalDateKey(new Date());
+    const writtenDate = parseCalendarDate(letter?.writtenDate)?.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }) || '';
 
     if (!deliveredToday) {
         return null;
@@ -55,7 +61,7 @@ const ArrivedLetterCard = ({ letter }) => {
                         color: colors.mutedForeground,
                         letterSpacing: 1.2
                     }} >
-                        {letter?.writtenDate}
+                        {writtenDate}
                     </Text>
                     <View style={{flexDirection: 'row'}}>
                         <Text style={{

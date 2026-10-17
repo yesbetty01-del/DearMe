@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useTheme from '../../store/useTheme';
@@ -9,8 +9,12 @@ import Toolbar from '../../components/write/toolbar';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useLetterStore, isLetterAvailable } from '../../store/letterStore';
 import useWritingContent from '../../hook/useWritingContent';
+import {
+    prepareContentBlocksForSave,
+} from '../../utils/attachmentStorage';
 
 const Reply = () => {
+    const draftId = useRef(`${Date.now()}`);
     const { colors, spacing, fSize } = useTheme();
     const styles = createStyles(colors, spacing, fSize);
     const { letterId, replyId } = useLocalSearchParams();
@@ -39,12 +43,16 @@ const Reply = () => {
     const saveReply = async () => {
         if (!available || !writing.hasWritingContent) return;
         try {
+            const replyIdToSave = existingReply?.id || draftId.current;
+            const preparedContent = await prepareContentBlocksForSave({
+                blocks: writing.contentBlocks,
+            });
             const reply = {
                 ...(existingReply || {}),
-                id: existingReply?.id || `${Date.now()}`,
+                id: replyIdToSave,
                 content: writing.content,
-                contentBlocks: writing.contentBlocks,
-                attachments: writing.attachments,
+                contentBlocks: preparedContent.contentBlocks,
+                attachments: preparedContent.attachments,
                 writtenDate: existingReply?.writtenDate || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             };
             if (existingReply) {
