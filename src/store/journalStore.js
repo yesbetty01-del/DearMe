@@ -3,41 +3,12 @@ import { getItems, setItems, setManyItems } from "../utils/storage";
 
 const JOURNALS_STORAGE_KEY = "journals";
 const DELETED_JOURNALS_STORAGE_KEY = "deletedJournals";
+const LEGACY_JOURNAL_SEED_IDS = new Set(["1", "2", "3"]);
+const JOURNAL_SEED_CLEANUP_KEY = 'migration:remove-journal-seeds:v1';
 let deletedJournalIds = new Set();
 
 const useJournalsStore = create((set, get) => ({
-    journals: [
-        {
-            id: "1",
-            title: "The morning fog at the cabin",
-            date: "2023-11-02T00:00:00.000Z",
-            mood: "smile",
-            moodName: "CALM",
-            moodColor: "moodCalm",
-            image: require('../../image/image.png'),
-            content: "Spent the morning with coffee and a book. The kind of day that doesn't ask anything of you — no plans to keep, no one waiting on a reply. I used to think days like this were wasted. That if nothing happened, nothing counted. But I'm starting to suspect the opposite is true, that the days which ask nothing are the ones that give the most back. The light moved across the kitchen table while I read. I noticed it three separate times, which felt like its own small accomplishment."
-        },
-        {
-            id: "2",
-            title: "Finding small things",
-            date: "2024-10-14T00:00:00.000Z",
-            mood: "sun",
-            moodName: "WARM",
-            moodColor: "moodWarm",
-            image: require('../../image/image.png'),
-            content: "Spent the morning with coffee and a book. The kind of day that doesn't ask anything of you — no plans to keep, no one waiting on a reply. I used to think days like this were wasted. That if nothing happened, nothing counted. But I'm starting to suspect the opposite is true, that the days which ask nothing are the ones that give the most back. The light moved across the kitchen table while I read. I noticed it three separate times, which felt like its own small accomplishment."
-        },
-        {
-            id: "3",
-            title: 'The summer of 2025',
-            date: "2025-08-02T00:00:00.000Z",
-            mood: "cloud",
-            moodName: "CLOUDY",
-            moodColor: "moodCloud",
-            image: require('../../image/image.png'),
-            content: "Spent the morning with coffee and a book. The kind of day that doesn't ask anything of you — no plans to keep, no one waiting on a reply. I used to think days like this were wasted. That if nothing happened, nothing counted. But I'm starting to suspect the opposite is true, that the days which ask nothing are the ones that give the most back. The light moved across the kitchen table while I read. I noticed it three separate times, which felt like its own small accomplishment."
-        },
-    ],
+    journals: [],
     addJournal: async (entry) => {
         const journals = [entry, ...get().journals];
         if (!await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals))) throw new Error('Could not save your entry. Please try again.');
@@ -89,9 +60,10 @@ const useJournalsStore = create((set, get) => ({
 }))
 
 export const hydrateJournalStore = async () => {
-    const [storedJournals, storedDeletedIds] = await Promise.all([
+    const [storedJournals, storedDeletedIds, seedCleanupComplete] = await Promise.all([
         getItems(JOURNALS_STORAGE_KEY),
         getItems(DELETED_JOURNALS_STORAGE_KEY),
+        getItems(JOURNAL_SEED_CLEANUP_KEY),
     ]);
     try {
         const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
@@ -100,18 +72,26 @@ export const hydrateJournalStore = async () => {
         console.error("Error parsing deleted journal IDs:", error);
     }
     if (!storedJournals) {
-        const journals = useJournalsStore.getState().journals.filter((journal) => !deletedJournalIds.has(String(journal.id)));
-        useJournalsStore.setState({ journals });
-        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        useJournalsStore.setState({ journals: [] });
+        await setItems(JOURNALS_STORAGE_KEY, JSON.stringify([]));
+        if (!seedCleanupComplete) await setItems(JOURNAL_SEED_CLEANUP_KEY, 'true');
         return;
     }
 
     try {
         const savedJournals = JSON.parse(storedJournals);
+        const removeLegacySeeds = seedCleanupComplete !== 'true';
         const journals = Array.isArray(savedJournals)
-            ? savedJournals.filter((journal) => !deletedJournalIds.has(String(journal.id)))
+            ? savedJournals.filter((journal) => {
+                const isLegacySeed = removeLegacySeeds && LEGACY_JOURNAL_SEED_IDS.has(String(journal.id));
+                return !deletedJournalIds.has(String(journal.id)) && !isLegacySeed;
+            })
             : [];
         useJournalsStore.setState({ journals });
+        if (journals.length !== savedJournals.length || removeLegacySeeds) {
+            await setItems(JOURNALS_STORAGE_KEY, JSON.stringify(journals));
+        }
+        if (removeLegacySeeds) await setItems(JOURNAL_SEED_CLEANUP_KEY, 'true');
     } catch (error) {
         console.error("Error parsing saved journals:", error);
     }

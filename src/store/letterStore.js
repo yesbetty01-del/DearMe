@@ -3,26 +3,9 @@ import { getItems, setItems, setManyItems } from '../utils/storage';
 
 const STORAGE_KEY = 'letters';
 const DELETED_LETTERS_STORAGE_KEY = 'deletedLetters';
+const LEGACY_LETTER_SEED_IDS = new Set(['1', '2', '3']);
+const LETTER_SEED_CLEANUP_KEY = 'migration:remove-letter-seeds:v1';
 let deletedLetterIds = new Set();
-
-const seedLetters = [
-    {
-        id: '1', title: 'To my future self', mood: 'moon', moodName: 'QUIET', moodColor: 'moodQuiet',
-        image: require('../../image/image.png'),
-        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-        writtenDate: 'Aug 1, 2025', deliveryDate: '2026-08-01', status: 'delivered', replies: [],
-    },
-    {
-        id: '2', title: 'My graduation', mood: 'flame', moodName: 'ALIVE', moodColor: 'moodAlive',
-        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-        writtenDate: 'May 15, 2025', deliveryDate: '2025-11-15', status: 'delivered', replies: [],
-    },
-    {
-        id: '3', title: 'Dreams for next year', image: require('../../image/image.png'),
-        content: "Dear me, By the time you read this it should be spring, which means you survived the part of the year you were dreading when you wrote this. I hope it was less bad than you thought. It usually is. I want you to remember that you wrote this on a Thursday in October when everything felt heavy, and you still sat down and believed there'd be someone on the other end to read it. That was the whole point. Go outside. Buy the good coffee. Call your sister.",
-        writtenDate: 'Jan 1, 2026', deliveryDate: '2027-01-01', status: 'scheduled', replies: [],
-    },
-];
 
 export const toLocalDateKey = (value) => {
     if (typeof value === 'string') {
@@ -75,7 +58,7 @@ const persist = async (letters) => {
 };
 
 export const useLetterStore = create((set, get) => ({
-    letters: seedLetters.map(withCurrentStatus),
+    letters: [],
     addLetter: async (letter) => {
         const letters = [withCurrentStatus(letter), ...get().letters];
         await persist(letters);
@@ -133,9 +116,10 @@ export const useLetterStore = create((set, get) => ({
 }));
 
 export const hydrateLetterStore = async () => {
-    const [storedLetters, storedDeletedIds] = await Promise.all([
+    const [storedLetters, storedDeletedIds, seedCleanupComplete] = await Promise.all([
         getItems(STORAGE_KEY),
         getItems(DELETED_LETTERS_STORAGE_KEY),
+        getItems(LETTER_SEED_CLEANUP_KEY),
     ]);
     try {
         const parsedDeletedIds = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
@@ -149,15 +133,21 @@ export const hydrateLetterStore = async () => {
             .map(withCurrentStatus);
         useLetterStore.setState({ letters });
         await persist(letters);
+        if (!seedCleanupComplete) await setItems(LETTER_SEED_CLEANUP_KEY, 'true');
         return;
     }
     try {
         const saved = JSON.parse(storedLetters);
         if (!Array.isArray(saved)) return;
-        const activeSavedLetters = saved.filter((letter) => !deletedLetterIds.has(String(letter.id)));
+        const removeLegacySeeds = seedCleanupComplete !== 'true';
+        const activeSavedLetters = saved.filter((letter) => {
+            const isLegacySeed = removeLegacySeeds && LEGACY_LETTER_SEED_IDS.has(String(letter.id));
+            return !deletedLetterIds.has(String(letter.id)) && !isLegacySeed;
+        });
         const letters = activeSavedLetters.map(withCurrentStatus);
         useLetterStore.setState({ letters });
-        await persist(letters);
+        if (letters.length !== saved.length || removeLegacySeeds) await persist(letters);
+        if (removeLegacySeeds) await setItems(LETTER_SEED_CLEANUP_KEY, 'true');
     } catch (error) {
         console.error('Error parsing saved letters:', error);
     }
