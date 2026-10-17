@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import useTheme from '../../store/useTheme';
@@ -15,6 +15,7 @@ import { createBackupFile, inspectBackupFile, restoreBackupFile } from '../../ut
 import { getItems, setItems } from '../../utils/storage';
 import LoadingScreen from '../../components/loadingScreen';
 import { useAuth, useClerk, useUser } from '@clerk/expo';
+import { getAppLock } from '../../utils/appLock';
 
 const PROFILE_SETTINGS_KEY = 'profileSettings';
 const DEFAULT_SETTINGS = {
@@ -35,18 +36,27 @@ const Profile = () => {
     const styles = createStyles(colors, spacing);
 
     useEffect(() => {
-        getItems(PROFILE_SETTINGS_KEY)
-            .then((savedSettings) => {
-                if (!savedSettings) return;
-                try {
-                    setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
-                } catch (error) {
-                    console.error('Could not load profile settings:', error);
+        Promise.all([getItems(PROFILE_SETTINGS_KEY), getAppLock()])
+            .then(([savedSettings, lock]) => {
+                let persistedSettings = {};
+                if (savedSettings) {
+                    try {
+                        persistedSettings = JSON.parse(savedSettings);
+                    } catch (error) {
+                        console.error('Could not load profile settings:', error);
+                    }
                 }
+                setSettings({ ...DEFAULT_SETTINGS, ...persistedSettings, appLock: lock?.method || '' });
             })
             .catch((error) => console.error('Could not load profile settings:', error))
             .finally(() => setSettingsLoaded(true));
     }, []);
+
+    useFocusEffect(useCallback(() => {
+        getAppLock()
+            .then((lock) => setSettings((current) => ({ ...current, appLock: lock?.method || '' })))
+            .catch((error) => console.error('Could not refresh app lock:', error));
+    }, []));
 
     const updateSetting = (key, value) => {
         const nextSettings = { ...settings, [key]: value };
@@ -54,13 +64,7 @@ const Profile = () => {
         setItems(PROFILE_SETTINGS_KEY, JSON.stringify(nextSettings));
     };
 
-    const chooseAppLock = () => Alert.alert('App lock', 'Choose a lock method', [
-        ...['PIN', 'Password', 'Biometrics', 'Pattern'].map((method) => ({
-            text: method,
-            onPress: () => updateSetting('appLock', method),
-        })),
-        { text: 'Cancel', style: 'cancel' },
-    ]);
+    const chooseAppLock = () => router.push('/app-lock');
 
     const exportBackup = async () => {
         if (busy) return;

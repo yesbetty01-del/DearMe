@@ -13,6 +13,7 @@ import { hydrateLetterStore, useLetterStore } from '../store/letterStore';
 import { hydrateJournalStore, useJournalsReady } from '../store/journalStore';
 import { initializeDataLayer } from '../utils/storage';
 import LoadingScreen from '../components/loadingScreen';
+import AppLockGate from '../components/appLockGate';
 import { setConvexTokenProvider } from '../utils/convexAuth';
 import { requestSync, setSyncHandler } from '../utils/syncQueue';
 import { syncLocalData } from '../utils/convexRecords';
@@ -99,7 +100,10 @@ function AppLayout() {
                     <Stack.Screen name='index'/>
                     <Stack.Screen name='onboarding'/>
                     <Stack.Screen name='(tabs)'/>
+                    <Stack.Screen name='app-lock'/>
+                    <Stack.Screen name='app-lock/setup'/>
                 </Stack>
+                <AppLockGate />
                 {clerkPublishableKey ? <AuthSyncBridge /> : null}
             </BottomSheetModalProvider>
         </GestureHandlerRootView>

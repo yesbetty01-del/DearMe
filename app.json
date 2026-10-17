@@ -47,6 +47,12 @@
       ],
       "expo-font",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow DearMe to use Face ID to unlock your private writing."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow DearMe to access photos you choose to add to a journal entry or letter.",
