@@ -35,7 +35,11 @@ const PromptCard = () => {
                 })}
             </View>
             {!!selectedMood && (
-                <Pressable onPress={() => router.push('/write/journal')} style={styles.promptAction} accessibilityRole="button">
+                <Pressable
+                    onPress={() => router.push({ pathname: '/write/journal', params: { mood: selectedMood } })}
+                    style={styles.promptAction}
+                    accessibilityRole="button"
+                >
                     <View style={[styles.writeIcon, { backgroundColor: colors[MOODS.find((mood) => mood.label === selectedMood)?.color] || colors.primary }]}><Icon name="feather" color={colors.onPrimary} size={16} /></View>
                     <Text style={styles.promptText}>Write about feeling {selectedMood.toLowerCase()}</Text>
                     <Icon name="arrow-right" color={colors.mutedForeground} size={16} />

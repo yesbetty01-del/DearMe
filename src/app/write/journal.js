@@ -20,12 +20,14 @@ const MOOD_DETAILS = {
 
 const Journal = () => {
     const { colors } = useTheme();
-    const { editId } = useLocalSearchParams();
+    const { editId, mood: initialMood } = useLocalSearchParams();
     const journals = journalStore();
     const existingEntry = journals.find((entry) => entry.id === editId);
     const [draft, setDraft] = useState(() => ({
         title: existingEntry?.title || '',
-        mood: existingEntry?.moodName ? existingEntry.moodName[0] + existingEntry.moodName.slice(1).toLowerCase() : null,
+        mood: existingEntry?.moodName
+            ? existingEntry.moodName[0] + existingEntry.moodName.slice(1).toLowerCase()
+            : Object.hasOwn(MOOD_DETAILS, initialMood) ? initialMood : null,
     }));
     const initialBlocks = existingEntry?.contentBlocks?.length
         ? existingEntry.contentBlocks

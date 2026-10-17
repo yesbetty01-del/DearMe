@@ -79,7 +79,7 @@ const Home = () => {
                 }
                 ListFooterComponent={(
                     <EarlierEntriesList
-                        entries={sortedJournals.filter((entry) => entry.id !== featuredEntry?.id).slice(0, 3)}
+                        entries={sortedJournals.slice(0, 3)}
                     />
                 )}
                 showsVerticalScrollIndicator={false}

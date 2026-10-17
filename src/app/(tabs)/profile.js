@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -185,16 +185,14 @@ const Profile = () => {
                     </Pressable>
                 </View>
 
-                <View style={styles.profileRow}>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200' }}
-                        style={styles.avatar}
-                        accessibilityLabel="Sophie"
-                    />
-                    <View>
-                        <Text style={styles.name}>Sophie</Text>
-                        <Text style={styles.caption}>Writing since March 2024</Text>
+                <View style={styles.profileEmptyState}>
+                    <View style={styles.profileEmptyIcon}>
+                        <Icon name="user" color={colors.mutedForeground} size={20} />
                     </View>
+                    <Text style={styles.profileEmptyTitle}>Your profile</Text>
+                    <Text style={styles.profileEmptyText}>
+                        Sign in or create an account to add your name and photo here.
+                    </Text>
                 </View>
 
                 <View style={styles.pagesCard}>
@@ -378,28 +376,36 @@ const createStyles = (colors, spacing) => {
             justifyContent: 'center',
         },
         pressed: { opacity: 0.65 },
-        profileRow: {
-            flexDirection: 'row',
+        profileEmptyState: {
             alignItems: 'center',
             marginTop: spacing.xl,
             marginBottom: spacing.xl,
+            padding: spacing.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 16,
+            backgroundColor: colors.surface,
         },
-        avatar: {
-            width: 64,
-            height: 64,
-            borderRadius: 32,
-            marginRight: spacing.md,
+        profileEmptyIcon: {
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            alignItems: 'center',
+            justifyContent: 'center',
             backgroundColor: colors.surfaceAlt,
         },
-        name: {
+        profileEmptyTitle: {
             color: colors.foreground,
-            fontSize: 18,
+            fontSize: 16,
             fontFamily: 'Fraunces_400Regular',
+            marginTop: spacing.sm,
         },
-        caption: {
+        profileEmptyText: {
             color: colors.mutedForeground,
             fontSize: 12,
-            marginTop: 3,
+            lineHeight: 18,
+            textAlign: 'center',
+            marginTop: spacing.xs,
         },
         pagesCard: {
             backgroundColor: colors.surface,
