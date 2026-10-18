@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { getItems, setItems, setManyItems } from '../utils/storage';
-import { requestSync } from '../utils/syncQueue';
 
 const JOURNALS_STORAGE_KEY = 'journals';
 const DELETED_JOURNALS_STORAGE_KEY = 'deletedJournals';
@@ -24,13 +23,11 @@ const useJournalsStore = create((set, get) => ({
             : get().journals.map((item, index) => index === existingIndex ? { ...item, ...record } : item);
         await saveLocally(journals, 'Could not save your entry. Please try again.');
         set({ journals });
-        requestSync();
     },
     updateJournal: async (entryId, updates) => {
         const journals = get().journals.map((journal) => journal.id === entryId ? { ...journal, ...updates, updatedAt: Date.now() } : journal);
         await saveLocally(journals, 'Could not save your entry. Please try again.');
         set({ journals });
-        requestSync();
     },
     deleteJournal: async (entryId) => {
         const existing = get().journals.find((journal) => journal.id === entryId);
@@ -46,7 +43,6 @@ const useJournalsStore = create((set, get) => ({
         }
         deletedJournalIds = nextDeletedIds;
         set({ journals });
-        requestSync();
     },
     addReflection: async (entryId, reflection) => {
         const record = reflection;
@@ -55,7 +51,6 @@ const useJournalsStore = create((set, get) => ({
             : journal);
         await saveLocally(journals, 'Could not save your reflection. Please try again.');
         set({ journals });
-        requestSync();
     },
     updateReflection: async (entryId, reflectionId, updates) => {
         const journals = get().journals.map((journal) => journal.id === entryId
@@ -63,7 +58,6 @@ const useJournalsStore = create((set, get) => ({
             : journal);
         await saveLocally(journals, 'Could not save your reflection. Please try again.');
         set({ journals });
-        requestSync();
     },
     deleteReflection: async (entryId, reflectionId) => {
         const deletedReflectionKey = JSON.stringify([String(entryId), String(reflectionId)]);
@@ -84,7 +78,6 @@ const useJournalsStore = create((set, get) => ({
             throw new Error('Could not delete your reflection. Please try again.');
         }
         set({ journals });
-        requestSync();
     },
 }));
 

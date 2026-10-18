@@ -4,7 +4,6 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { hydrateJournalStore } from '../store/journalStore';
 import { hydrateLetterStore } from '../store/letterStore';
 import { getItems, replaceLocalData } from './storage';
-import { requestSync } from './syncQueue';
 
 const BACKUP_VERSION = 1;
 const BACKUP_FILE_TYPE = 'dearme-backup';
@@ -300,7 +299,6 @@ export const restoreBackupFile = async (file) => {
             hydrateJournalStore(),
             hydrateLetterStore(),
         ]);
-        requestSync();
     } catch (error) {
         throw new Error(`Writing was restored, but the app could not refresh its data. Restart DearMe to load it. ${error?.message || ''}`.trim());
     }

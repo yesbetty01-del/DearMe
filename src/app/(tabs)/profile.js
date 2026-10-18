@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -16,6 +16,10 @@ import { getItems, setItems } from '../../utils/storage';
 import LoadingScreen from '../../components/loadingScreen';
 import { useAuth, useClerk, useUser } from '@clerk/expo';
 import { getAppLock } from '../../utils/appLock';
+import { syncNow } from '../../utils/syncQueue';
+import themes from '../../utils/colors';
+import { THEME_CATALOG, getThemeAccessState } from '../../utils/themeCatalog';
+import { unlockThemeWithRewardedAd } from '../../services/themeUnlockService';
 
 const PROFILE_SETTINGS_KEY = 'profileSettings';
 const DEFAULT_SETTINGS = {
@@ -23,15 +27,21 @@ const DEFAULT_SETTINGS = {
     yearlyReminders: false,
     appLock: '',
     hideLockedLetters: false,
+    autoSync: false,
 };
 
 const Profile = () => {
-    const { colors, spacing, theme, toggleTheme } = useTheme();
+    const { colors, spacing, theme, setTheme, unlockedThemeIds, refreshUnlockedThemes } = useTheme();
     const journals = journalStore();
     const letters = useLetters();
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
     const [busyAction, setBusyAction] = useState(null);
+    const [infoModal, setInfoModal] = useState(null);
+    const [restoreConfirmation, setRestoreConfirmation] = useState(null);
+    const [themePickerVisible, setThemePickerVisible] = useState(false);
+    const [unlockingThemeId, setUnlockingThemeId] = useState(null);
+    const [isSignedIn, setIsSignedIn] = useState(false);
     const busy = busyAction !== null;
     const styles = createStyles(colors, spacing);
 
@@ -64,7 +74,88 @@ const Profile = () => {
         setItems(PROFILE_SETTINGS_KEY, JSON.stringify(nextSettings));
     };
 
+    const handleSyncNow = async () => {
+        if (busyAction === 'sync') return;
+        setBusyAction('sync');
+        setInfoModal({
+            title: 'Syncing your data',
+            message: 'Your local writing is being synchronized with your account now.',
+            icon: 'refresh-cw',
+            pending: true,
+        });
+        try {
+            await syncNow();
+            setInfoModal({ title: 'Sync complete', message: 'Your local data is up to date.', icon: 'check-circle' });
+        } catch (error) {
+            setInfoModal({
+                title: 'Sync could not be completed',
+                message: error?.message || 'Please try again when you are online.',
+                icon: 'alert-circle',
+            });
+        } finally {
+            setBusyAction(null);
+        }
+    };
+
     const chooseAppLock = () => router.push('/app-lock');
+
+    const handleAutoSyncChange = (enabled) => {
+        if (!enabled) {
+            updateSetting('autoSync', false);
+            return;
+        }
+        if (!isSignedIn) {
+            setInfoModal({
+                title: 'Account required',
+                message: 'Sign in or create an account to turn on automatic sync.',
+                icon: 'user',
+                actionLabel: 'Sign in or sign up',
+                onAction: () => router.push('/account'),
+            });
+            return;
+        }
+        updateSetting('autoSync', true);
+    };
+
+    const handleThemeUnlock = async (themeId) => {
+        if (unlockingThemeId) return;
+        setUnlockingThemeId(themeId);
+        try {
+            const result = await unlockThemeWithRewardedAd(themeId);
+            if (result.status === 'unlocked' || result.status === 'already-available') {
+                await refreshUnlockedThemes();
+                const unlockedTheme = THEME_CATALOG.find((option) => option.id === themeId);
+                if (unlockedTheme) setTheme(unlockedTheme.key);
+                setThemePickerVisible(false);
+                return;
+            }
+
+            const messages = {
+                unavailable: 'Rewarded ads are not available right now. This theme has not been unlocked.',
+                failed: 'The ad could not be completed. This theme has not been unlocked.',
+                'save-failed': 'Your theme unlock could not be saved on this device. Please try again.',
+            };
+            setInfoModal({
+                title: result.status === 'unavailable' ? 'Ad unavailable' : 'Theme not unlocked',
+                message: messages[result.status] || 'The theme could not be unlocked. Please try again.',
+                icon: 'alert-circle',
+            });
+        } catch (error) {
+            console.error('Could not unlock theme:', error);
+            setInfoModal({ title: 'Theme not unlocked', message: 'The theme could not be unlocked. Please try again.', icon: 'alert-circle' });
+        } finally {
+            setUnlockingThemeId(null);
+        }
+    };
+
+    const contactUs = async () => {
+        const emailUrl = 'mailto:?subject=DearMe%20support';
+        try {
+            await Linking.openURL(emailUrl);
+        } catch (error) {
+            setInfoModal({ title: 'Contact Us', message: 'No email app is available on this device.', icon: 'mail' });
+        }
+    };
 
     const exportBackup = async () => {
         if (busy) return;
@@ -88,7 +179,11 @@ const Profile = () => {
                 UTI: 'com.dearme.backup',
             });
         } catch (error) {
-            Alert.alert('Backup could not be created', error?.message || 'Please try again.');
+            setInfoModal({
+                title: 'Backup could not be created',
+                message: error?.message || 'Please try again.',
+                icon: 'alert-circle',
+            });
         } finally {
             setBusyAction(null);
         }
@@ -112,46 +207,36 @@ const Profile = () => {
             const backup = await inspectBackupFile(selectedFile);
             const { journals, reflections, letters, replies } = backup.summary;
             const confirmation = `This backup contains ${journals} journals, ${reflections} reflections, ${letters} letters, and ${replies} replies. Restoring it will replace all DearMe writing on this device.`;
-            if (Platform.OS === 'web') {
-                if (!window.confirm(`Replace local data?\n\n${confirmation}`)) {
-                    setBusyAction(null);
-                    return;
-                }
-                try {
-                    const result = await restoreBackupFile(selectedFile);
-                    window.alert(`Restore complete. ${result.journals} journals and ${result.letters} letters restored.`);
-                } catch (error) {
-                    window.alert(`Restore failed. ${error?.message || 'Please try again.'}`);
-                } finally {
-                    setBusyAction(null);
-                }
-                return;
-            }
-            Alert.alert(
-                'Replace local data?',
-                confirmation,
-                [
-                    { text: 'Cancel', style: 'cancel', onPress: () => setBusyAction(null) },
-                    {
-                        text: 'Replace and restore',
-                        style: 'destructive',
-                        onPress: async () => {
-                            try {
-                                const result = await restoreBackupFile(selectedFile);
-                                Alert.alert('Restore complete', `${result.journals} journals and ${result.letters} letters restored.`);
-                            } catch (error) {
-                                Alert.alert('Restore failed', error?.message || 'Please try again.');
-                            } finally {
-                                setBusyAction(null);
-                            }
-                        },
-                    },
-                ],
-                { cancelable: false },
-            );
+            setRestoreConfirmation({ selectedFile, message: confirmation });
         } catch (error) {
             setBusyAction(null);
-            Alert.alert('Backup could not be opened', error?.message || 'Choose a valid DearMe backup file.');
+            setInfoModal({
+                title: 'Backup could not be opened',
+                message: error?.message || 'Choose a valid DearMe backup file.',
+                icon: 'alert-circle',
+            });
+        }
+    };
+
+    const restoreSelectedBackup = async () => {
+        const selectedFile = restoreConfirmation?.selectedFile;
+        if (!selectedFile) return;
+        setRestoreConfirmation(null);
+        try {
+            const result = await restoreBackupFile(selectedFile);
+            setInfoModal({
+                title: 'Restore complete',
+                message: `${result.journals} journals and ${result.letters} letters restored.`,
+                icon: 'check-circle',
+            });
+        } catch (error) {
+            setInfoModal({
+                title: 'Restore failed',
+                message: error?.message || 'Please try again.',
+                icon: 'alert-circle',
+            });
+        } finally {
+            setBusyAction(null);
         }
     };
 
@@ -176,22 +261,22 @@ const Profile = () => {
     if (!settingsLoaded) return <LoadingScreen />;
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={['top','left', 'right']} style={styles.container}>
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.header}>
                     <Header header="Profile" />
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-                        onPress={toggleTheme}
+                        accessibilityLabel="Choose theme"
+                        onPress={() => setThemePickerVisible(true)}
                         style={({ pressed }) => [styles.themeButton, pressed && styles.pressed]}
                     >
-                        <Icon name={theme === 'light' ? 'moon' : 'sun'} color={colors.foreground} size={18} />
+                        <Icon name="sun" color={colors.foreground} size={18} />
                     </Pressable>
                 </View>
 
                 {process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY
-                    ? <AccountPanel colors={colors} spacing={spacing} styles={styles} />
+                    ? <AccountPanel colors={colors} spacing={spacing} styles={styles} onAuthStateChange={setIsSignedIn} />
                     : <View style={styles.profileEmptyState}>
                         <View style={styles.profileEmptyIcon}><Icon name="user" color={colors.mutedForeground} size={20} /></View>
                         <Text style={styles.profileEmptyTitle}>Your profile</Text>
@@ -268,12 +353,48 @@ const Profile = () => {
                     />
                 </SettingsSection>
 
+                <SettingsSection title="Sync" styles={styles}>
+                    <SettingSwitch
+                        icon="refresh-cw"
+                        label="Auto sync"
+                        description="Sync your writing when you’re online"
+                        value={settings.autoSync}
+                        onValueChange={handleAutoSyncChange}
+                        colors={colors}
+                        styles={styles}
+                    />
+                    <SettingButton
+                        icon="upload-cloud"
+                        label={busyAction === 'sync' ? 'Syncing...' : 'Sync Now'}
+                        onPress={handleSyncNow}
+                        colors={colors}
+                        styles={styles}
+                    />
+                </SettingsSection>
+
                 <SettingsSection title="Appearance" styles={styles}>
                     <SettingButton
-                        icon={theme === 'light' ? 'moon' : 'sun'}
+                        icon="sun"
                         label="Theme"
-                        detail={theme === 'light' ? 'Light' : 'Dark'}
-                        onPress={toggleTheme}
+                        detail={THEME_CATALOG.find((option) => option.key === theme)?.name || 'Light'}
+                        onPress={() => setThemePickerVisible(true)}
+                        colors={colors}
+                        styles={styles}
+                    />
+                </SettingsSection>
+
+                <SettingsSection title="About and support" styles={styles}>
+                    <SettingButton
+                        icon="info"
+                        label="About DearMe"
+                        onPress={() => router.push('/about')}
+                        colors={colors}
+                        styles={styles}
+                    />
+                    <SettingButton
+                        icon="mail"
+                        label="Contact Us"
+                        onPress={contactUs}
                         colors={colors}
                         styles={styles}
                     />
@@ -299,15 +420,55 @@ const Profile = () => {
                 </SettingsSection>
 
             </ScrollView>
+            <ThemePicker
+                visible={themePickerVisible}
+                selectedTheme={theme}
+                unlockedThemeIds={unlockedThemeIds}
+                unlockingThemeId={unlockingThemeId}
+                colors={colors}
+                onSelect={(themeKey) => {
+                    setTheme(themeKey);
+                    setThemePickerVisible(false);
+                }}
+                onUnlock={handleThemeUnlock}
+                onClose={() => setThemePickerVisible(false)}
+            />
+            <ConfirmationDialog
+                visible={Boolean(restoreConfirmation)}
+                title="Replace local data?"
+                message={restoreConfirmation?.message || ''}
+                confirmLabel="Replace and restore"
+                icon="upload"
+                confirmColor={colors.destructive}
+                onCancel={() => {
+                    setRestoreConfirmation(null);
+                    setBusyAction(null);
+                }}
+                onConfirm={restoreSelectedBackup}
+            />
+            <FeedbackModal
+                visible={Boolean(infoModal)}
+                title={infoModal?.title || ''}
+                message={infoModal?.message || ''}
+                icon={infoModal?.icon || 'info'}
+                pending={infoModal?.pending}
+                actionLabel={infoModal?.actionLabel}
+                onAction={infoModal?.onAction}
+                onClose={() => setInfoModal(null)}
+            />
         </SafeAreaView>
     );
 };
 
-const AccountPanel = ({ colors, spacing, styles }) => {
+const AccountPanel = ({ colors, spacing, styles, onAuthStateChange }) => {
     const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
     const { user } = useUser();
     const { signOut } = useClerk();
     const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+    useEffect(() => {
+        onAuthStateChange(isLoaded && isSignedIn);
+    }, [isLoaded, isSignedIn, onAuthStateChange]);
 
     if (!isLoaded) return <LoadingScreen />;
     if (!isSignedIn) {
@@ -364,6 +525,195 @@ const SettingsSection = ({ title, styles, children }) => (
         <View style={styles.settingsCard}>{children}</View>
     </View>
 );
+
+const ThemePicker = ({ visible, selectedTheme, unlockedThemeIds, unlockingThemeId, colors, onSelect, onUnlock, onClose }) => {
+    const styles = createThemePickerStyles(colors);
+
+    return (
+        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+            <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Choose your theme</Text>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Close theme picker" onPress={onClose} style={styles.closeButton}>
+                        <Icon name="x" color={colors.foreground} size={19} />
+                    </Pressable>
+                </View>
+                <Text style={styles.subtitle}>The whole journal changes as you choose.</Text>
+                <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+                    {THEME_CATALOG.map((option) => {
+                        const palette = themes[option.key];
+                        const accessState = getThemeAccessState(option, unlockedThemeIds);
+                        const selected = selectedTheme === option.key;
+                        const isUnlocking = unlockingThemeId === option.id;
+                        return (
+                            <View
+                                key={option.id}
+                                style={[styles.themeCard, selected && styles.selectedCard]}
+                            >
+                                <Pressable
+                                    accessibilityRole="radio"
+                                    accessibilityState={{ checked: selected, disabled: accessState === 'locked' }}
+                                    onPress={() => accessState !== 'locked' && onSelect(option.key)}
+                                    style={[styles.preview, { backgroundColor: palette.background }]}
+                                >
+                                    <View style={[styles.previewPaper, { backgroundColor: palette.surface }]}>
+                                        <View style={[styles.previewHeading, { backgroundColor: palette.primary }]} />
+                                        <View style={[styles.previewLine, { backgroundColor: palette.primary }]} />
+                                        <View style={[styles.previewShortLine, { backgroundColor: palette.primary }]} />
+                                    </View>
+                                    <View style={styles.swatches}>
+                                        <View style={[styles.swatch, { backgroundColor: palette.accent }]} />
+                                        <View style={[styles.swatch, styles.mainSwatch, { backgroundColor: palette.primary }]} />
+                                    </View>
+                                    {selected && <View style={[styles.check, { backgroundColor: palette.primary }]}><Icon name="check" color={palette.onPrimary} size={12} /></View>}
+                                    {accessState === 'locked' && <View style={styles.lockBadge}><Icon name="lock" color={colors.foreground} size={11} /></View>}
+                                </Pressable>
+                                <Text style={styles.themeName}>{option.name}</Text>
+                                <Text style={styles.themeNote}>{option.note}</Text>
+                                {accessState === 'locked' ? (
+                                    <Pressable
+                                        accessibilityRole="button"
+                                        disabled={Boolean(unlockingThemeId)}
+                                        onPress={() => onUnlock(option.id)}
+                                        style={({ pressed }) => [styles.unlockButton, { backgroundColor: colors.primary, opacity: isUnlocking ? 0.65 : pressed ? 0.8 : 1 }]}
+                                    >
+                                        <Icon name="play-circle" color={colors.onPrimary} size={14} />
+                                        <Text style={[styles.unlockLabel, { color: colors.onPrimary }]}>{isUnlocking ? 'Loading ad...' : 'Watch ad to unlock'}</Text>
+                                    </Pressable>
+                                ) : (
+                                    <Text style={styles.accessLabel}>{accessState === 'free' ? 'Free' : 'Unlocked'}</Text>
+                                )}
+                            </View>
+                        );
+                    })}
+                </ScrollView>
+            </SafeAreaView>
+        </Modal>
+    );
+};
+
+const createThemePickerStyles = (colors) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: 22 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8 },
+    title: { color: colors.foreground, fontSize: 25, fontFamily: 'Fraunces_400Regular' },
+    closeButton: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+    subtitle: { color: colors.mutedForeground, fontSize: 13, marginTop: 6, marginBottom: 18 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingBottom: 28 },
+    themeCard: { width: '48%', marginBottom: 14, padding: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 17, backgroundColor: colors.surface },
+    selectedCard: { borderColor: colors.primary, borderWidth: 2 },
+    preview: { height: 124, borderRadius: 11, padding: 10, overflow: 'hidden' },
+    previewPaper: { borderRadius: 8, padding: 10 },
+    previewHeading: { width: 42, height: 6, borderRadius: 3, opacity: 0.85 },
+    previewLine: { height: 4, marginTop: 9, borderRadius: 2, opacity: 0.18 },
+    previewShortLine: { width: '72%', height: 4, marginTop: 5, borderRadius: 2, opacity: 0.18 },
+    swatches: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 9 },
+    swatch: { width: 15, height: 15, borderRadius: 8 },
+    mainSwatch: { flex: 1, borderRadius: 8 },
+    check: { position: 'absolute', top: 7, right: 7, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+    lockBadge: { position: 'absolute', right: 7, bottom: 7, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+    themeName: { color: colors.foreground, fontSize: 15, fontFamily: 'Fraunces_400Regular', marginTop: 9, marginHorizontal: 2 },
+    themeNote: { minHeight: 30, color: colors.mutedForeground, fontSize: 10, lineHeight: 14, marginTop: 2, marginHorizontal: 2 },
+    unlockButton: { minHeight: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 10, marginTop: 7, paddingHorizontal: 5 },
+    unlockLabel: { fontSize: 9, fontFamily: 'Inter_500Medium' },
+    accessLabel: { minHeight: 32, color: colors.mutedForeground, fontSize: 10, paddingTop: 10, paddingHorizontal: 2 },
+});
+
+const FeedbackModal = ({ visible, title, message, icon, pending = false, actionLabel, onAction, onClose }) => {
+    const { colors, spacing, fSize } = useTheme();
+    const styles = createFeedbackModalStyles(colors, spacing, fSize);
+
+    return (
+        <Modal
+            visible={visible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => { if (!pending) onClose(); }}
+        >
+            <View style={styles.overlay}>
+                <View style={styles.dialog}>
+                    <View style={styles.iconWrap}>
+                        <Icon name={icon} color={colors.primary} size={21} />
+                    </View>
+                    <Text style={styles.title}>{title}</Text>
+                    <Text style={styles.message}>{message}</Text>
+                    {!pending && (
+                        <>
+                            {actionLabel && (
+                                <Pressable
+                                    accessibilityRole="button"
+                                    onPress={() => {
+                                        onClose();
+                                        onAction?.();
+                                    }}
+                                    style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+                                >
+                                    <Text style={styles.closeLabel}>{actionLabel}</Text>
+                                </Pressable>
+                            )}
+                            <Pressable
+                                accessibilityRole="button"
+                                onPress={onClose}
+                                style={({ pressed }) => [styles.closeButton, actionLabel && styles.secondaryButton, pressed && styles.pressed]}
+                            >
+                                <Text style={[styles.closeLabel, actionLabel && styles.secondaryLabel]}>{actionLabel ? 'Not now' : 'Close'}</Text>
+                            </Pressable>
+                        </>
+                    )}
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+const createFeedbackModalStyles = (colors, spacing, fSize) => StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: spacing.xl,
+        backgroundColor: colors.overlay,
+    },
+    dialog: {
+        width: '100%',
+        maxWidth: 360,
+        alignItems: 'center',
+        padding: spacing.xl,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+    },
+    iconWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.md,
+        backgroundColor: colors.secondary,
+    },
+    title: { color: colors.foreground, fontFamily: 'Fraunces_400Regular', fontSize: fSize.cardTitle, textAlign: 'center' },
+    message: {
+        color: colors.mutedForeground,
+        fontSize: fSize.secondary,
+        lineHeight: fSize.secondary * 1.5,
+        textAlign: 'center',
+        marginTop: spacing.sm,
+    },
+    closeButton: {
+        minHeight: 46,
+        alignSelf: 'stretch',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: spacing.xl,
+        borderRadius: 14,
+        backgroundColor: colors.primary,
+    },
+    closeLabel: { color: colors.onPrimary, fontFamily: 'Inter_500Medium', fontSize: fSize.secondary },
+    secondaryButton: { marginTop: spacing.sm, backgroundColor: 'transparent' },
+    secondaryLabel: { color: colors.mutedForeground },
+    pressed: { opacity: 0.78 },
+});
 
 const SettingSwitch = ({ icon, label, description, value, onValueChange, colors, styles }) => (
     <View style={styles.settingRow}>

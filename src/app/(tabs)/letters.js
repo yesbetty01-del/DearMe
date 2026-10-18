@@ -145,7 +145,7 @@ const Letters = () => {
                 message: 'Letters you schedule for later will appear here until they arrive.',
             },
         Delivered: {
-            icon: 'mail-open',
+            icon: 'mail',
             title: 'No delivered letters yet',
             message: 'When a letter is ready to open, you’ll find it here.',
         },

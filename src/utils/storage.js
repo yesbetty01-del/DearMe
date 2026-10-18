@@ -7,6 +7,13 @@ const LEGACY_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters',
 const BACKUP_MANAGED_KEYS = ['journals', 'deletedJournals', 'letters', 'deletedLetters', 'deletedReflections', 'deletedReplies'];
 
 let databasePromise;
+let writeQueue = Promise.resolve();
+
+const enqueueWrite = (writeOperation) => {
+    const operation = writeQueue.then(writeOperation, writeOperation);
+    writeQueue = operation.catch(() => {});
+    return operation;
+};
 
 const migrateAsyncStorage = async (database) => {
     const migration = await database.getFirstAsync(
@@ -83,30 +90,34 @@ export const setItems = async (key, value) => {
 };
 
 export const setManyItems = async (items) => {
-    const database = await initializeDataLayer();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const [key, value] of items) {
-            await transaction.runAsync(
-                'INSERT OR REPLACE INTO app_data (key, value) VALUES (?, ?)',
-                key,
-                value,
-            );
-        }
+    return enqueueWrite(async () => {
+        const database = await initializeDataLayer();
+        await database.withExclusiveTransactionAsync(async (transaction) => {
+            for (const [key, value] of items) {
+                await transaction.runAsync(
+                    'INSERT OR REPLACE INTO app_data (key, value) VALUES (?, ?)',
+                    key,
+                    value,
+                );
+            }
+        });
     });
 };
 
 export const replaceLocalData = async (items) => {
-    const database = await initializeDataLayer();
-    await database.withExclusiveTransactionAsync(async (transaction) => {
-        for (const key of BACKUP_MANAGED_KEYS) {
-            await transaction.runAsync('DELETE FROM app_data WHERE key = ?', key);
-        }
-        for (const [key, value] of items) {
-            await transaction.runAsync(
-                'INSERT INTO app_data (key, value) VALUES (?, ?)',
-                key,
-                value,
-            );
-        }
+    return enqueueWrite(async () => {
+        const database = await initializeDataLayer();
+        await database.withExclusiveTransactionAsync(async (transaction) => {
+            for (const key of BACKUP_MANAGED_KEYS) {
+                await transaction.runAsync('DELETE FROM app_data WHERE key = ?', key);
+            }
+            for (const [key, value] of items) {
+                await transaction.runAsync(
+                    'INSERT INTO app_data (key, value) VALUES (?, ?)',
+                    key,
+                    value,
+                );
+            }
+        });
     });
 };

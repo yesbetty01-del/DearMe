@@ -1,13 +1,11 @@
 import { create } from 'zustand';
 import { getItems, setItems, setManyItems } from '../utils/storage';
 import { getDeviceTimeZone, getLetterReleaseAt } from '../utils/letterSchedule';
-import { requestSync } from '../utils/syncQueue';
 
 const STORAGE_KEY = 'letters';
 const DELETED_LETTERS_STORAGE_KEY = 'deletedLetters';
 const DELETED_REPLIES_STORAGE_KEY = 'deletedReplies';
 const LEGACY_LETTER_SEED_IDS = new Set(['1', '2', '3']);
-const LETTER_SEED_CLEANUP_KEY = 'migration:remove-letter-seeds:v1';
 let deletedLetterIds = new Set();
 
 const normalizeNow = (value) => {
@@ -66,7 +64,6 @@ export const useLetterStore = create((set, get) => ({
             : get().letters.map((item, index) => index === existingIndex ? { ...item, ...record } : item);
         await persist(letters);
         set({ letters });
-        requestSync();
     },
     updateLetter: async (letterId, updates) => {
         const letters = get().letters.map((letter) => letter.id === letterId
@@ -74,7 +71,6 @@ export const useLetterStore = create((set, get) => ({
             : letter);
         await persist(letters);
         set({ letters });
-        requestSync();
     },
     deleteLetter: async (letterId) => {
         const nextDeletedIds = new Set(deletedLetterIds).add(String(letterId));
@@ -87,7 +83,6 @@ export const useLetterStore = create((set, get) => ({
         } catch { throw new Error('Could not delete your letter. Please try again.'); }
         deletedLetterIds = nextDeletedIds;
         set({ letters });
-        requestSync();
     },
     addReply: async (letterId, reply) => {
         const record = reply;
@@ -96,7 +91,6 @@ export const useLetterStore = create((set, get) => ({
             : letter);
         await persist(letters);
         set({ letters });
-        requestSync();
     },
     updateReply: async (letterId, replyId, updates) => {
         const letters = get().letters.map((letter) => letter.id === letterId
@@ -104,7 +98,6 @@ export const useLetterStore = create((set, get) => ({
             : letter);
         await persist(letters);
         set({ letters });
-        requestSync();
     },
     deleteReply: async (letterId, replyId) => {
         const deletedReplyKey = JSON.stringify([String(letterId), String(replyId)]);
@@ -120,7 +113,6 @@ export const useLetterStore = create((set, get) => ({
             [STORAGE_KEY, JSON.stringify(letters)],
         ]);
         set({ letters });
-        requestSync();
     },
     refreshArrivals: async (now = new Date()) => {
         now = normalizeNow(now);
@@ -133,34 +125,35 @@ export const useLetterStore = create((set, get) => ({
 }));
 
 export const hydrateLetterStore = async () => {
-    const [storedLetters, storedDeletedIds, seedCleanupComplete] = await Promise.all([
+    const [storedLetters, storedDeletedIds] = await Promise.all([
         getItems(STORAGE_KEY),
         getItems(DELETED_LETTERS_STORAGE_KEY),
-        getItems(LETTER_SEED_CLEANUP_KEY),
     ]);
     try {
         const parsed = storedDeletedIds ? JSON.parse(storedDeletedIds) : [];
         if (Array.isArray(parsed)) deletedLetterIds = new Set(parsed.map(String));
     } catch (error) { console.error('Error parsing deleted letter IDs:', error); }
 
+    // Legacy demo letters used these fixed IDs. Tombstone them as well as
+    // removing them locally so cloud sync cannot restore the demo records.
+    for (const id of LEGACY_LETTER_SEED_IDS) deletedLetterIds.add(id);
+
     let letters = [];
     if (storedLetters) {
         try {
             const saved = JSON.parse(storedLetters);
             if (Array.isArray(saved)) {
-                const removeLegacySeeds = seedCleanupComplete !== 'true';
                 letters = saved.filter((letter) =>
                     !deletedLetterIds.has(String(letter.id)) &&
-                    !(removeLegacySeeds && LEGACY_LETTER_SEED_IDS.has(String(letter.id))),
+                    !LEGACY_LETTER_SEED_IDS.has(String(letter.id)),
                 ).map(withCurrentStatus);
-                if (letters.length !== saved.length || removeLegacySeeds) await persist(letters);
-                if (removeLegacySeeds) await setItems(LETTER_SEED_CLEANUP_KEY, 'true');
+                if (letters.length !== saved.length) await persist(letters);
             }
         } catch (error) { console.error('Error parsing saved letters:', error); }
     } else {
         await persist([]);
-        if (seedCleanupComplete !== 'true') await setItems(LETTER_SEED_CLEANUP_KEY, 'true');
     }
+    await setItems(DELETED_LETTERS_STORAGE_KEY, JSON.stringify([...deletedLetterIds]));
     useLetterStore.setState({ letters });
     useLetterStore.setState({ isReady: true });
 };

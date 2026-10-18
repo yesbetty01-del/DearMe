@@ -11,11 +11,11 @@ import { useAuth } from '@clerk/expo';
 import useTheme from '../store/useTheme';
 import { hydrateLetterStore, useLetterStore } from '../store/letterStore';
 import { hydrateJournalStore, useJournalsReady } from '../store/journalStore';
-import { initializeDataLayer } from '../utils/storage';
+import { getItems, initializeDataLayer } from '../utils/storage';
 import LoadingScreen from '../components/loadingScreen';
 import AppLockGate from '../components/appLockGate';
 import { setConvexTokenProvider } from '../utils/convexAuth';
-import { requestSync, setSyncHandler } from '../utils/syncQueue';
+import { setSyncHandler, syncNow } from '../utils/syncQueue';
 import { syncLocalData } from '../utils/convexRecords';
 import {
     useFonts,
@@ -102,6 +102,7 @@ function AppLayout() {
                     <Stack.Screen name='(tabs)'/>
                     <Stack.Screen name='app-lock'/>
                     <Stack.Screen name='app-lock/setup'/>
+                    <Stack.Screen name='about'/>
                 </Stack>
                 <AppLockGate />
                 {clerkPublishableKey ? <AuthSyncBridge /> : null}
@@ -122,11 +123,33 @@ function AuthSyncBridge() {
 
         setConvexTokenProvider(getToken);
         setSyncHandler(() => syncLocalData(userId));
-        const subscription = AppState.addEventListener('change', (state) => {
-            if (state === 'active') requestSync();
+
+        let isActive = true;
+        const syncWhenEnabledAndOnline = async () => {
+            try {
+                const savedSettings = await getItems('profileSettings');
+                const settings = savedSettings ? JSON.parse(savedSettings) : {};
+                if (!isActive || settings.autoSync !== true) return;
+
+                const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+                if (!convexUrl) return;
+                const response = await fetch(convexUrl, { method: 'HEAD' });
+                if (!response.ok && response.status >= 500) return;
+                await syncNow();
+            } catch (error) {
+                // Keep automatic sync quiet while offline; the next check retries.
+            }
+        };
+
+        syncWhenEnabledAndOnline();
+        const interval = setInterval(syncWhenEnabledAndOnline, 60 * 1000);
+        const appStateSubscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') syncWhenEnabledAndOnline();
         });
         return () => {
-            subscription.remove();
+            isActive = false;
+            clearInterval(interval);
+            appStateSubscription.remove();
             setConvexTokenProvider(null);
             setSyncHandler(null);
         };

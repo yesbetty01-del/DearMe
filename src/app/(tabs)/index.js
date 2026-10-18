@@ -11,6 +11,7 @@ import LockedLetterCard from '../../components/lockedLetterCard';
 import FeaturedReflectionCard from '../../components/home/featuredReflectionCard';
 import WeekMoodTracker from '../../components/home/weekMoodTracker';
 import EarlierEntriesList from '../../components/home/earlierEntriesList';
+import EmptyJournalCard from '../../components/home/emptyJournalCard';
 import { useLetters, useLetterStore, getDeliveryDateKey, toLocalDateKey } from '../../store/letterStore';
 import Section from '../../components/section';
 import journalStore from '../../store/journalStore';
@@ -77,7 +78,7 @@ const Home = () => {
                                 ))}
                             </View>
                         )}
-                        <FeaturedReflectionCard entry={featuredEntry} />
+                        {journals.length ? <FeaturedReflectionCard entry={featuredEntry} /> : <EmptyJournalCard />}
                         {waitingLetter && (
                             <View style={{ marginTop: spacing.xl }}>
                                 <Section title="On its way to you" />
