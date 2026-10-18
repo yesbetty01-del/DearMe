@@ -1,5 +1,5 @@
 import { ConvexHttpClient } from 'convex/browser';
-import { api } from '../../convex/_generated/api';
+import { api } from './convexApi';
 import { cacheStoredAttachment, getAttachmentOwnerKey, prepareContentBlocksForSync } from './attachmentStorage';
 import { getConvexAuthToken } from './convexAuth';
 import { getItems, setItems, setManyItems } from './storage';

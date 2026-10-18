@@ -1,7 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
-import { api } from '../../convex/_generated/api';
+import { api } from './convexApi';
 import { getItems, setItems } from './storage';
 import { getConvexAuthToken } from './convexAuth';
 
