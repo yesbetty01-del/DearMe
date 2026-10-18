@@ -17,6 +17,7 @@ import useWritingContent from '../../hook/useWritingContent';
 import {
     prepareContentBlocksForSave,
 } from '../../utils/attachmentStorage';
+import { enableArrivalNotificationForLetter } from '../../services/reminderNotifications';
 
 const Letter = () => {
     const draftId = useRef(`${Date.now()}`);
@@ -48,7 +49,7 @@ const Letter = () => {
     const handleDateChange = (event, selectedDate) => {
         setShowDatePicker(false);
 
-        if (selectedDate) {
+        if (event?.type === 'set' && selectedDate) {
             setArrivalDate(selectedDate);
             setShowTimePicker(true);
         }
@@ -101,6 +102,7 @@ const Letter = () => {
         } else {
             await addLetter(updatedLetter);
         }
+        await enableArrivalNotificationForLetter();
     };
 
     return (

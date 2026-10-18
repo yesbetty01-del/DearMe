@@ -1,12 +1,12 @@
 const onboardingSlides = [
     {
-        eyebrow: 'Write',
+        eyebrow: 'Write & reflect',
         titleParts: [
-            { text: 'A page that asks\n' },
-            { text: 'nothing', emphasis: true },
-            { text: ' of you.' },
+            { text: 'Write today\n' },
+            { text: 'reflect', emphasis: true },
+            { text: ' tommorow.' },
         ],
-        body: 'Capture the day in your own words - a sentence or a few pages. No streaks, no pressure.',
+        body: 'Capture the day in your own words, then come back later to reflect. See how far you’ve come.',
         illustration: 'journal',
     },
     {

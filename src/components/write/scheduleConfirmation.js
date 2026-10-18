@@ -6,17 +6,17 @@ import Icon from '../icon';
 const ScheduleConfirmation = ({ visible, onClose, onSeal, onSealed }) => {
     const { colors, spacing, fSize } = useTheme();
     const [saving, setSaving] = useState(false);
-    const [saveError, setSaveError] = useState(false);
+    const [saveError, setSaveError] = useState('');
 
     const sealLetter = async () => {
         setSaving(true);
-        setSaveError(false);
+        setSaveError('');
         try {
             await onSeal();
             onClose();
             onSealed();
         } catch (error) {
-            setSaveError(true);
+            setSaveError(error?.message || 'We could not save this letter. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -40,7 +40,7 @@ const ScheduleConfirmation = ({ visible, onClose, onSeal, onSealed }) => {
                     <Text style={{ fontFamily: 'Inter_400Regular', fontSize: fSize.secondary, marginTop: spacing.md, color: colors.mutedForeground, textAlign: 'center' }}>
                         Once sealed, you won't be able to read or edit this letter until the arrival date.
                     </Text>
-                    {saveError && <Text style={{ color: colors.primary, marginTop: spacing.sm, textAlign: 'center' }}>We could not save this letter. Please try again.</Text>}
+                    {saveError ? <Text style={{ color: colors.primary, marginTop: spacing.sm, textAlign: 'center' }}>{saveError}</Text> : null}
                     <Pressable
                         style={{ marginTop: spacing.xl, backgroundColor: colors.primary, paddingVertical: spacing.sm, width: '100%', alignItems: 'center', borderRadius: spacing.lg, opacity: saving ? 0.7 : 1 }}
                         onPress={sealLetter}

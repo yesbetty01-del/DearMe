@@ -10,13 +10,14 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { useAuth } from '@clerk/expo';
 import useTheme from '../store/useTheme';
 import { hydrateLetterStore, useLetterStore } from '../store/letterStore';
-import { hydrateJournalStore, useJournalsReady } from '../store/journalStore';
+import { hydrateJournalStore, subscribeJournals, useJournalsReady } from '../store/journalStore';
 import { getItems, initializeDataLayer } from '../utils/storage';
 import LoadingScreen from '../components/loadingScreen';
 import AppLockGate from '../components/appLockGate';
 import { setConvexTokenProvider } from '../utils/convexAuth';
 import { setSyncHandler, syncNow } from '../utils/syncQueue';
 import { syncLocalData } from '../utils/convexRecords';
+import { syncReminderNotifications } from '../services/reminderNotifications';
 import {
     useFonts,
     Fraunces_300Light,
@@ -65,13 +66,21 @@ function AppLayout() {
     useEffect(() => {
         if (!storageReady || !lettersReady || !journalsReady) return undefined;
         refreshArrivals();
+        syncReminderNotifications();
+        const unsubscribeLetters = useLetterStore.subscribe(() => syncReminderNotifications());
+        const unsubscribeJournals = subscribeJournals(() => syncReminderNotifications());
         const interval = setInterval(refreshArrivals, 60 * 1000);
         const subscription = AppState.addEventListener('change', (state) => {
-            if (state === 'active') refreshArrivals();
+            if (state === 'active') {
+                refreshArrivals();
+                syncReminderNotifications();
+            }
         });
         return () => {
             clearInterval(interval);
             subscription.remove();
+            unsubscribeLetters();
+            unsubscribeJournals();
         };
     }, [lettersReady, journalsReady, refreshArrivals, storageReady]);
 

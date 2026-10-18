@@ -20,10 +20,11 @@ import { syncNow } from '../../utils/syncQueue';
 import themes from '../../utils/colors';
 import { THEME_CATALOG, getThemeAccessState } from '../../utils/themeCatalog';
 import { unlockThemeWithRewardedAd } from '../../services/themeUnlockService';
+import { requestReminderPermission, syncReminderNotifications } from '../../services/reminderNotifications';
 
 const PROFILE_SETTINGS_KEY = 'profileSettings';
 const DEFAULT_SETTINGS = {
-    arrivalReminders: false,
+    arrivalReminders: true,
     yearlyReminders: false,
     appLock: '',
     hideLockedLetters: false,
@@ -62,6 +63,13 @@ const Profile = () => {
             .finally(() => setSettingsLoaded(true));
     }, []);
 
+    useEffect(() => {
+        if (!settingsLoaded || !settings.arrivalReminders || Platform.OS === 'web') return;
+        requestReminderPermission()
+            .then((permitted) => permitted && syncReminderNotifications())
+            .catch((error) => console.error('Could not enable arrival reminders:', error));
+    }, [settingsLoaded]);
+
     useFocusEffect(useCallback(() => {
         getAppLock()
             .then((lock) => setSettings((current) => ({ ...current, appLock: lock?.method || '' })))
@@ -72,6 +80,34 @@ const Profile = () => {
         const nextSettings = { ...settings, [key]: value };
         setSettings(nextSettings);
         setItems(PROFILE_SETTINGS_KEY, JSON.stringify(nextSettings));
+    };
+
+    const handleReminderChange = async (key, enabled) => {
+        if (enabled) {
+            try {
+                const permitted = await requestReminderPermission();
+                if (!permitted) {
+                    setInfoModal({
+                        title: 'Notifications are off',
+                        message: 'Allow notifications in your device settings to receive reminders.',
+                        icon: 'bell-off',
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error('Could not request notification permission:', error);
+                setInfoModal({ title: 'Notifications unavailable', message: 'DearMe could not enable notifications on this device.', icon: 'alert-circle' });
+                return;
+            }
+        }
+        const nextSettings = { ...settings, [key]: enabled };
+        setSettings(nextSettings);
+        try {
+            await setItems(PROFILE_SETTINGS_KEY, JSON.stringify(nextSettings));
+            await syncReminderNotifications();
+        } catch (error) {
+            console.error('Could not save reminder settings:', error);
+        }
     };
 
     const handleSyncNow = async () => {
@@ -316,18 +352,18 @@ const Profile = () => {
                     <SettingSwitch
                         icon="mail"
                         label="Letter arrival"
-                        description="Get notified when a letter is ready to open"
+                        description="Get notified when a letter arrives"
                         value={settings.arrivalReminders}
-                        onValueChange={(value) => updateSetting('arrivalReminders', value)}
+                        onValueChange={(value) => handleReminderChange('arrivalReminders', value)}
                         colors={colors}
                         styles={styles}
                     />
                     <SettingSwitch
                         icon="calendar"
                         label="Year-old entries"
-                        description="A reminder when an entry reaches its anniversary"
+                        description="Get notified when an entry is one year old"
                         value={settings.yearlyReminders}
-                        onValueChange={(value) => updateSetting('yearlyReminders', value)}
+                        onValueChange={(value) => handleReminderChange('yearlyReminders', value)}
                         colors={colors}
                         styles={styles}
                     />

@@ -122,6 +122,7 @@ export default function journalStore() {
 
 export const useJournalsReady = () => useJournalsStore((state) => state.isReady);
 export const getJournalSnapshot = () => useJournalsStore.getState().journals;
+export const subscribeJournals = (listener) => useJournalsStore.subscribe(listener);
 export const replaceJournalSnapshot = (journals) => useJournalsStore.setState({ journals });
 export const setDeletedJournalSnapshot = (ids) => { deletedJournalIds = new Set(ids.map(String)); };
 export const addJournal = (entry) => useJournalsStore.getState().addJournal(entry);

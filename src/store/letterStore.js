@@ -58,7 +58,10 @@ export const useLetterStore = create((set, get) => ({
     isReady: false,
     addLetter: async (letter) => {
         const record = withCurrentStatus({ ...letter, updatedAt: Date.now() });
-        const existingIndex = get().letters.findIndex((item) => item.id === record.id || item.localKey === record.localKey);
+        const existingIndex = get().letters.findIndex((item) =>
+            (record.id != null && item.id === record.id) ||
+            (record.localKey != null && item.localKey === record.localKey),
+        );
         let letters = existingIndex === -1
             ? [record, ...get().letters]
             : get().letters.map((item, index) => index === existingIndex ? { ...item, ...record } : item);

@@ -1,0 +1,28 @@
+diff --git a/build/DevicePushTokenAutoRegistration.fx.js b/build/DevicePushTokenAutoRegistration.fx.js
+index a81d1c3ed274302929ffefdcc857942afa7c3c37..b34e8b52bb7ac5b5dbe323bbf4d5c69452154196 100644
+--- a/build/DevicePushTokenAutoRegistration.fx.js
++++ b/build/DevicePushTokenAutoRegistration.fx.js
+@@ -1,4 +1,5 @@
+ import 'abort-controller/polyfill';
++import { isRunningInExpoGo } from 'expo';
+ import { UnavailabilityError } from 'expo-modules-core';
+ import ServerRegistrationModule from './ServerRegistrationModule';
+ import { addPushTokenListener } from './TokenEmitter';
+@@ -72,7 +73,7 @@ export async function __handlePersistedRegistrationInfoAsync(registrationInfo) {
+         console.warn('[expo-notifications] Error encountered while updating server registration with latest device push token.', e);
+     }
+ }
+-if (ServerRegistrationModule.getRegistrationInfoAsync) {
++if (!isRunningInExpoGo() && ServerRegistrationModule.getRegistrationInfoAsync) {
+     // A global scope (to get all the updates) device push token
+     // subscription, never cleared.
+     addPushTokenListener(async (token) => {
+@@ -103,7 +104,7 @@ if (ServerRegistrationModule.getRegistrationInfoAsync) {
+         console.error('[expo-notifications] Error reading persisted server registration info: ', e);
+     });
+ }
+-else {
++else if (!isRunningInExpoGo()) {
+     console.warn(`[expo-notifications] Error encountered while fetching auto-registration state, new tokens will not be automatically registered on server.`, new UnavailabilityError('ServerRegistrationModule', 'getRegistrationInfoAsync'));
+ }
+ //# sourceMappingURL=DevicePushTokenAutoRegistration.fx.js.map

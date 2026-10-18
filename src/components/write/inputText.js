@@ -15,7 +15,11 @@ const InputText = ({ placeholderText, fixedTitle, title, onChangeTitle, blocks =
                 placeholderTextColor={colors.mutedForeground}
                 value={title ?? localTitle}
                 onChangeText={onChangeTitle ?? setLocalTitle}
-                style={{ fontFamily: 'Fraunces_400Regular', fontSize: fSize.cardTitle, color: colors.foreground }}
+                style={{
+                    fontFamily: 'serif',
+                    fontSize: fSize.cardTitle,
+                    color: colors.foreground,
+                }}
             />
             <View style={{ height: 1, width: '100%', backgroundColor: colors.divider }} />
             <View style={{ flexGrow: 1 }}>
@@ -42,13 +46,13 @@ const InputText = ({ placeholderText, fixedTitle, title, onChangeTitle, blocks =
                             scrollEnabled={false}
                             textAlignVertical="top"
                             style={{
-                                fontFamily: 'Fraunces_400Regular',
+                                fontFamily: 'serif',
                                 fontSize: fSize.body,
                                 lineHeight,
                                 color: colors.foreground,
-                                minHeight: 56,
+                                minHeight: 100,
                                 height: blockLineCounts[block.id]
-                                    ? Math.max(56, blockLineCounts[block.id] * lineHeight + spacing.xs)
+                                    ? Math.max(100, blockLineCounts[block.id] * lineHeight + spacing.xs)
                                     : undefined,
                                 flexGrow: isLastTextBlock ? 1 : 0,
                                 paddingBottom: spacing.xs,
